@@ -1,0 +1,16 @@
+This is the blog format! Please fill like this before starting a new blog post.
+
+---
+title: ""
+excerpt: "" # description
+category: 
+  - ""
+tags:
+  - ...
+date: "2025-08-30" # YYYY-MM-DD
+updated: "2025-08-30" # YYYY-MM-DD
+languages:
+    - en
+authors:
+    - ""
+---

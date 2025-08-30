@@ -1,0 +1,413 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Enhanced color tokens for premium dark-only design */
+  --background: oklch(0.06 0 0); /* Deep dark background */
+  --foreground: oklch(0.98 0 0); /* Bright white text */
+  --card: oklch(0.08 0.005 240); /* Subtle blue-tinted dark cards */
+  --card-foreground: oklch(0.95 0 0); /* Light card text */
+  --popover: oklch(0.08 0 0); /* Dark popover */
+  --popover-foreground: oklch(0.95 0 0); /* Light popover text */
+  --primary: oklch(0.7 0.2 200); /* Vibrant cyan primary */
+  --primary-foreground: oklch(0.06 0 0); /* Dark text on primary */
+  --secondary: oklch(0.12 0.01 240); /* Subtle blue secondary */
+  --secondary-foreground: oklch(0.9 0 0); /* Light secondary text */
+  --muted: oklch(0.1 0.005 240); /* Muted dark with blue hint */
+  --muted-foreground: oklch(0.7 0 0); /* Medium gray muted text */
+  --accent: oklch(0.75 0.25 280); /* Purple accent for highlights */
+  --accent-foreground: oklch(0.06 0 0); /* Dark accent text */
+  --destructive: oklch(0.65 0.25 20); /* Warm red for destructive */
+  --destructive-foreground: oklch(0.98 0 0); /* Light destructive text */
+  --border: oklch(0.15 0.01 240); /* Subtle blue-tinted borders */
+  --input: oklch(0.1 0.005 240); /* Dark input with blue hint */
+  --ring: oklch(0.7 0.2 200); /* Bright cyan focus ring */
+  --chart-1: oklch(0.7 0.2 200);
+  --chart-2: oklch(0.75 0.25 280);
+  --chart-3: oklch(0.65 0.25 20);
+  --chart-4: oklch(0.6 0.15 120);
+  --chart-5: oklch(0.8 0.2 60);
+  --radius: 0.75rem; /* Larger radius for premium feel */
+  --sidebar: oklch(0.08 0.005 240);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.7 0.2 200);
+  --sidebar-primary-foreground: oklch(0.06 0 0);
+  --sidebar-accent: oklch(0.12 0.01 240);
+  --sidebar-accent-foreground: oklch(0.9 0 0);
+  --sidebar-border: oklch(0.15 0.01 240);
+  --sidebar-ring: oklch(0.7 0.2 200);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    /* Added premium background pattern */
+    background-image: radial-gradient(circle at 25% 25%, oklch(0.08 0.02 240) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, oklch(0.08 0.02 280) 0%, transparent 50%);
+  }
+
+  /* Enhanced typography and spacing for premium feel */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply text-balance;
+  }
+
+  /* Enhanced markdown content styles */
+  .prose {
+  @apply max-w-none text-foreground leading-relaxed;
+  }
+  /* Larger paragraph spacing for readability */
+  .prose p {
+    @apply my-5 leading-8;
+  }
+
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    @apply text-foreground font-bold tracking-tight;
+  }
+
+  .prose h1 {
+    @apply text-4xl mb-8 mt-12;
+  }
+
+  .prose h2 {
+    @apply text-3xl mb-6 mt-10;
+  }
+
+  .prose h3 {
+    @apply text-2xl mb-4 mt-8;
+  }
+
+  /* Default pre styling (non-highlight blocks) */
+  .prose pre:not(.code-block) {
+    @apply my-6 rounded-xl p-6 overflow-x-auto shadow-lg;
+    border: 1px solid oklch(0.35 0.01 240 / 0.6) !important;
+    background: transparent !important;
+  }
+
+  /* Completely remove all borders from any code block elements */
+  .prose pre.code-block,
+  .prose pre.code-block *,
+  .prose .code-block pre,
+  .prose .code-block code {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    background: transparent !important;
+  }
+
+  .prose pre.code-block {
+    @apply overflow-hidden p-0;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Override KaTeX styles ONLY for KaTeX, not code blocks */
+  .katex code {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    background: transparent !important;
+    font-family: inherit !important;
+  }
+
+  /* Isolate code blocks from any KaTeX interference */
+  .prose .code-container {
+    /* Reset any potential KaTeX inheritance */
+    font-family: var(--font-mono) !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    text-decoration: none !important;
+    
+    /* Independent styling - no border, the parent already has one */
+    @apply my-0 p-4 rounded-lg;
+    border: none !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .prose .code-container * {
+    border: none !important;
+    box-shadow: none !important;
+    /* Complete isolation from external styles but preserve syntax colors */
+    font-family: var(--font-mono) !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    text-decoration: none !important;
+    /* DON'T override color - let syntax highlighting work */
+  }
+
+  /* Force all nested elements to be completely independent */
+  .prose .code-container > *:not(.absolute) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    visibility: inherit !important;
+    /* Prevent any KaTeX or external CSS interference but preserve colors */
+    font-family: var(--font-mono) !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    text-decoration: none !important;
+    /* Let syntax highlighting colors work */
+  }
+
+  /* Inline code: no grey background */
+  .prose :not(pre) > code {
+    @apply px-1 rounded-md text-sm font-mono text-primary;
+    background: transparent;
+    border: 0;
+  }
+
+  .prose pre code {
+    @apply bg-transparent p-0 border-0;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-primary pl-6 py-2 italic text-muted-foreground bg-card/30 rounded-r-lg;
+  }
+
+  .prose a {
+    @apply text-primary hover:text-accent transition-colors duration-200 underline decoration-primary/30 hover:decoration-accent/50;
+  }
+
+  /* List styling */
+  .prose ul {
+    @apply list-disc pl-6 my-4 space-y-2;
+  }
+
+  .prose ol {
+    @apply list-decimal pl-6 my-4 space-y-2;
+  }
+
+  .prose li {
+    @apply text-foreground leading-relaxed;
+  }
+
+  .prose ul ul, .prose ol ol, .prose ul ol, .prose ol ul {
+    @apply my-2;
+  }
+
+  /* Enhanced KaTeX styles - completely isolated */
+  .katex {
+    @apply text-foreground;
+    /* Prevent any interference with code blocks */
+    font-family: 'KaTeX_Main', 'Times New Roman', serif !important;
+  }
+
+  .katex-display {
+    @apply my-6 p-4 bg-card/50 rounded-lg;
+    border: 1px solid oklch(0.35 0.01 240 / 0.6) !important;
+    /* Isolate from code block styling */
+    font-family: 'KaTeX_Main', 'Times New Roman', serif !important;
+    font-style: normal !important;
+    text-decoration: none !important;
+  }
+
+  /* Ensure KaTeX doesn't affect any code elements */
+  .katex * {
+    font-family: inherit !important;
+  }
+
+  .katex code {
+    font-family: var(--font-mono) !important;
+  }
+
+  /* Added premium animations and effects */
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  .animate-slideInUp {
+    animation: slideInUp 0.6s ease-out both;
+  }
+
+  @keyframes glow {
+    from {
+      box-shadow: 0 0 20px oklch(0.7 0.2 200 / 0.3);
+    }
+    to {
+      box-shadow: 0 0 30px oklch(0.7 0.2 200 / 0.5), 0 0 40px oklch(0.75 0.25 280 / 0.2);
+    }
+  }
+
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .glass-effect {
+    @apply backdrop-blur-xl bg-card/80 border border-border/50;
+    background: linear-gradient(135deg, oklch(0.08 0.005 240 / 0.8), oklch(0.1 0.01 240 / 0.6));
+  }
+
+  /* Premium hover effects */
+  .premium-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .premium-hover:hover {
+    @apply transform -translate-y-1 shadow-2xl;
+    box-shadow: 0 20px 40px oklch(0 0 0 / 0.3), 0 0 20px oklch(0.7 0.2 200 / 0.2);
+  }
+
+  /* Dark scrollbar styling for code blocks and containers */
+  .code-container,
+  .prose pre,
+  pre {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.3 0.01 240) oklch(0.1 0.005 240);
+  }
+
+  /* Dark scrollbar styling for entire page */
+  html,
+  body,
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.3 0.01 240) oklch(0.1 0.005 240);
+  }
+
+  .code-container::-webkit-scrollbar,
+  .prose pre::-webkit-scrollbar,
+  pre::-webkit-scrollbar,
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .code-container::-webkit-scrollbar-track,
+  .prose pre::-webkit-scrollbar-track,
+  pre::-webkit-scrollbar-track,
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-track {
+    background: oklch(0.1 0.005 240);
+    border-radius: 4px;
+  }
+
+  .code-container::-webkit-scrollbar-thumb,
+  .prose pre::-webkit-scrollbar-thumb,
+  pre::-webkit-scrollbar-thumb,
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-thumb {
+    background: oklch(0.3 0.01 240);
+    border-radius: 4px;
+    border: 1px solid oklch(0.15 0.01 240);
+  }
+
+  .code-container::-webkit-scrollbar-thumb:hover,
+  .prose pre::-webkit-scrollbar-thumb:hover,
+  pre::-webkit-scrollbar-thumb:hover,
+  html::-webkit-scrollbar-thumb:hover,
+  body::-webkit-scrollbar-thumb:hover,
+  *::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.4 0.01 240);
+  }
+
+  /* Hide scrollbar buttons/arrows and corners */
+  .code-container::-webkit-scrollbar-button,
+  .prose pre::-webkit-scrollbar-button,
+  pre::-webkit-scrollbar-button,
+  html::-webkit-scrollbar-button,
+  body::-webkit-scrollbar-button,
+  *::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .code-container::-webkit-scrollbar-button:start:decrement,
+  .code-container::-webkit-scrollbar-button:end:increment,
+  .prose pre::-webkit-scrollbar-button:start:decrement,
+  .prose pre::-webkit-scrollbar-button:end:increment,
+  pre::-webkit-scrollbar-button:start:decrement,
+  pre::-webkit-scrollbar-button:end:increment,
+  html::-webkit-scrollbar-button:start:decrement,
+  html::-webkit-scrollbar-button:end:increment,
+  body::-webkit-scrollbar-button:start:decrement,
+  body::-webkit-scrollbar-button:end:increment,
+  *::-webkit-scrollbar-button:start:decrement,
+  *::-webkit-scrollbar-button:end:increment {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .code-container::-webkit-scrollbar-corner,
+  .prose pre::-webkit-scrollbar-corner,
+  pre::-webkit-scrollbar-corner,
+  html::-webkit-scrollbar-corner,
+  body::-webkit-scrollbar-corner,
+  *::-webkit-scrollbar-corner {
+    display: none;
+  }
+}
