@@ -43,6 +43,9 @@ export default function HomeClient({ blogPosts }: { blogPosts: BlogPostClientMet
     return match ? match[1] : "LinkedIn"
   }
 
+  // Pluralization helper: treat 0 as singular per request
+  const visitorLabel = (n: number) => (n === 1 || n === 0 ? "visitor" : "visitors")
+
   const formatDate = (date: Date) => {
     const options: Intl.DateTimeFormatOptions = {
       weekday: "short",
@@ -66,115 +69,83 @@ export default function HomeClient({ blogPosts }: { blogPosts: BlogPostClientMet
     const idx = Math.floor(Math.random() * greetings.length)
     setGreeting(greetings[idx])
   }, [greetings])
-
-  const generateFingerprint = async () => {
-    const canvas = document.createElement("canvas")
-    const ctx = canvas.getContext("2d")
-    ctx!.textBaseline = "top"
-    ctx!.font = "14px Arial"
-    ctx!.fillText("Browser fingerprint", 2, 2)
-
-    // Get more detailed browser information for better uniqueness
-    const webglCanvas = document.createElement("canvas")
-    const webgl = webglCanvas.getContext("webgl")
-    const webglInfo = webgl ? {
-      vendor: webgl.getParameter(webgl.VENDOR),
-      renderer: webgl.getParameter(webgl.RENDERER),
-    } : {}
-
-    const fingerprint = [
-      navigator.userAgent,
-      navigator.language,
-      navigator.languages?.join(',') || '',
-      navigator.platform,
-      screen.width + "x" + screen.height,
-      screen.colorDepth,
-      new Date().getTimezoneOffset(),
-      navigator.hardwareConcurrency || 0,
-      (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 0,
-      canvas.toDataURL(),
-      webglInfo.vendor || '',
-      webglInfo.renderer || '',
-      navigator.cookieEnabled,
-      typeof navigator.doNotTrack !== 'undefined' ? navigator.doNotTrack : '',
-    ].join("|")
-
-    let hash = 0
-    for (let i = 0; i < fingerprint.length; i++) {
-      const char = fingerprint.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    return Math.abs(hash).toString()
-  }
-
+  // Use CountAPI (public counter) with a 24h cooldown per browser to prevent reload spam
   useEffect(() => {
-    const updateVisitorCount = async () => {
-      const today = new Date().toDateString()
-      const fingerprintKey = `fingerprint_${today}`
-      const totalVisitorsKey = "totalVisitors"
-      const lastVisitKey = "lastVisitDate"
+    let cancelled = false
 
+    const COUNTAPI_BASE = "https://api.countapi.xyz"
+    const lastHitKey = "vc_lastHitAt"
+    const lastKnownKey = "vc_lastKnownCount"
+    const cooldownMs = 24 * 60 * 60 * 1000 // 24 hours
+
+    const getNsAndKey = () => {
+      // Namespace derived from hostname; key for whole site
+      const ns = (typeof window !== "undefined" ? location.hostname : "site").replace(/[^\w]/g, "_")
+      const key = "site_total"
+      return { ns, key }
+    }
+
+    const getCount = async (ns: string, key: string): Promise<number> => {
+      const res = await fetch(`${COUNTAPI_BASE}/get/${ns}/${key}`, { cache: "no-store" })
+      if (!res.ok) throw new Error("countapi get failed")
+      const data = await res.json() as { value?: number }
+      return data?.value ?? 0
+    }
+
+    const createIfMissing = async (ns: string, key: string) => {
+      // Try to create counter initialized at 0; ignore failures (might already exist)
       try {
-        const fingerprint = await generateFingerprint()
-        const storedFingerprint = localStorage.getItem(fingerprintKey)
-        const lastVisitDate = localStorage.getItem(lastVisitKey)
-
-        // Try to get a more global count using a shared key
-        const globalKey = `visitor_${fingerprint}_${today}`
-        const hasGlobalVisit = localStorage.getItem(globalKey)
-
-        // Check if this is a new unique visit
-        const isNewVisit = !storedFingerprint || 
-                          storedFingerprint !== fingerprint || 
-                          lastVisitDate !== today
-
-        if (isNewVisit && !hasGlobalVisit) {
-          // Only increment if this is genuinely a new visit
-          const currentTotal = Number.parseInt(localStorage.getItem(totalVisitorsKey) || "0")
-          const newTotal = currentTotal + 1
-          
-          localStorage.setItem(totalVisitorsKey, newTotal.toString())
-          localStorage.setItem(fingerprintKey, fingerprint)
-          localStorage.setItem(lastVisitKey, today)
-          localStorage.setItem(globalKey, "visited")
-          setVisitorCount(newTotal)
-        } else {
-          // Returning visitor
-          const currentTotal = Number.parseInt(localStorage.getItem(totalVisitorsKey) || "1")
-          setVisitorCount(Math.max(currentTotal, 1))
-        }
-
-        // Cleanup old data
-        const cleanupOldData = () => {
-          const keys = Object.keys(localStorage)
-          const today = new Date()
-          keys.forEach((key) => {
-            if (key.startsWith("fingerprint_") || key.startsWith("visitor_")) {
-              const dateStr = key.includes("fingerprint_") 
-                ? key.split("_").slice(1).join("_")
-                : key.split("_").slice(-1)[0]
-              
-              if (dateStr) {
-                const keyDate = new Date(dateStr)
-                const daysDiff = (today.getTime() - keyDate.getTime()) / (1000 * 60 * 60 * 24)
-                if (daysDiff > 30) {
-                  localStorage.removeItem(key)
-                }
-              }
-            }
-          })
-        }
-        cleanupOldData()
-      } catch (error) {
-        console.error('Error updating visitor count:', error)
-        // Fallback to simple counting
-        const stored = localStorage.getItem(totalVisitorsKey)
-        setVisitorCount(stored ? parseInt(stored) : 1)
+        await fetch(`${COUNTAPI_BASE}/create?namespace=${encodeURIComponent(ns)}&key=${encodeURIComponent(key)}&value=0`, { cache: "no-store" })
+      } catch {
+        // ignore
       }
     }
 
-    updateVisitorCount()
+    const hit = async (ns: string, key: string): Promise<number> => {
+      const res = await fetch(`${COUNTAPI_BASE}/hit/${ns}/${key}`, { cache: "no-store" })
+      if (!res.ok) throw new Error("countapi hit failed")
+      const data = await res.json() as { value?: number }
+      return data?.value ?? 0
+    }
+
+    const run = async () => {
+      const { ns, key } = getNsAndKey()
+      try {
+        // Ensure the counter exists and prime the UI with current value
+        try {
+          const current = await getCount(ns, key)
+          if (!cancelled) setVisitorCount(current)
+        } catch {
+          await createIfMissing(ns, key)
+        }
+
+        const now = Date.now()
+        const lastHitAt = Number.parseInt(localStorage.getItem(lastHitKey) || "0", 10)
+
+        if (now - lastHitAt >= cooldownMs) {
+          const newVal = await hit(ns, key)
+          localStorage.setItem(lastHitKey, String(now))
+          localStorage.setItem(lastKnownKey, String(newVal))
+          if (!cancelled) setVisitorCount(newVal)
+        } else {
+          // No increment; refresh the current count or use cached value
+          try {
+            const current = await getCount(ns, key)
+            if (!cancelled) setVisitorCount(current)
+            localStorage.setItem(lastKnownKey, String(current))
+          } catch {
+            const cached = Number.parseInt(localStorage.getItem(lastKnownKey) || "0", 10)
+            if (!cancelled) setVisitorCount(cached)
+          }
+        }
+      } catch (e) {
+        const cached = Number.parseInt(localStorage.getItem(lastKnownKey) || "0", 10)
+        if (!cancelled) setVisitorCount(Math.max(cached, 1))
+      }
+    }
+
+    run()
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
@@ -232,7 +203,7 @@ export default function HomeClient({ blogPosts }: { blogPosts: BlogPostClientMet
           </div>
           <div className="mt-4 flex flex-col items-center gap-2 text-sm text-muted-foreground animate-slideInUp" style={{ animationDelay: "0.4s" }}>
             <div className="flex items-center justify-center gap-1">
-              👥 {visitorCount.toLocaleString()} {visitorCount === 1 ? "visitor" : "visitors"}
+              👥 {visitorCount.toLocaleString()} {visitorLabel(visitorCount)}
             </div>
             <div className="flex items-center justify-center gap-1">🕐 {isMounted ? formatDate(currentTime) : "Loading..."}</div>
           </div>
