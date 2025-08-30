@@ -67,19 +67,36 @@ export default function HomeClient({ blogPosts }: { blogPosts: BlogPostClientMet
     setGreeting(greetings[idx])
   }, [greetings])
 
-  const generateFingerprint = () => {
+  const generateFingerprint = async () => {
     const canvas = document.createElement("canvas")
     const ctx = canvas.getContext("2d")
     ctx!.textBaseline = "top"
     ctx!.font = "14px Arial"
     ctx!.fillText("Browser fingerprint", 2, 2)
 
+    // Get more detailed browser information for better uniqueness
+    const webglCanvas = document.createElement("canvas")
+    const webgl = webglCanvas.getContext("webgl")
+    const webglInfo = webgl ? {
+      vendor: webgl.getParameter(webgl.VENDOR),
+      renderer: webgl.getParameter(webgl.RENDERER),
+    } : {}
+
     const fingerprint = [
       navigator.userAgent,
       navigator.language,
+      navigator.languages?.join(',') || '',
+      navigator.platform,
       screen.width + "x" + screen.height,
+      screen.colorDepth,
       new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency || 0,
+      (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 0,
       canvas.toDataURL(),
+      webglInfo.vendor || '',
+      webglInfo.renderer || '',
+      navigator.cookieEnabled,
+      typeof navigator.doNotTrack !== 'undefined' ? navigator.doNotTrack : '',
     ].join("|")
 
     let hash = 0
@@ -92,53 +109,72 @@ export default function HomeClient({ blogPosts }: { blogPosts: BlogPostClientMet
   }
 
   useEffect(() => {
-    const today = new Date().toDateString()
-    const fingerprintKey = `fingerprint_${today}`
-    const totalVisitorsKey = "totalVisitors"
-    const lastVisitKey = "lastVisitDate"
+    const updateVisitorCount = async () => {
+      const today = new Date().toDateString()
+      const fingerprintKey = `fingerprint_${today}`
+      const totalVisitorsKey = "totalVisitors"
+      const lastVisitKey = "lastVisitDate"
 
-    const fingerprint = generateFingerprint()
-    const storedFingerprint = localStorage.getItem(fingerprintKey)
-    const lastVisitDate = localStorage.getItem(lastVisitKey)
+      try {
+        const fingerprint = await generateFingerprint()
+        const storedFingerprint = localStorage.getItem(fingerprintKey)
+        const lastVisitDate = localStorage.getItem(lastVisitKey)
 
-    // Check if this is a new unique visit (new day OR new fingerprint)
-    const isNewVisit = !storedFingerprint || 
-                      storedFingerprint !== fingerprint || 
-                      lastVisitDate !== today
+        // Try to get a more global count using a shared key
+        const globalKey = `visitor_${fingerprint}_${today}`
+        const hasGlobalVisit = localStorage.getItem(globalKey)
 
-    if (isNewVisit) {
-      // Only increment if this is genuinely a new visit
-      const currentTotal = Number.parseInt(localStorage.getItem(totalVisitorsKey) || "0")
-      const newTotal = currentTotal + 1
-      
-      localStorage.setItem(totalVisitorsKey, newTotal.toString())
-      localStorage.setItem(fingerprintKey, fingerprint)
-      localStorage.setItem(lastVisitKey, today)
-      setVisitorCount(newTotal)
-    } else {
-      // Returning visitor (same day, same fingerprint)
-      const currentTotal = Number.parseInt(localStorage.getItem(totalVisitorsKey) || "1")
-      setVisitorCount(Math.max(currentTotal, 1))
-    }
+        // Check if this is a new unique visit
+        const isNewVisit = !storedFingerprint || 
+                          storedFingerprint !== fingerprint || 
+                          lastVisitDate !== today
 
-    const cleanupOldData = () => {
-      const keys = Object.keys(localStorage)
-      const today = new Date()
-      keys.forEach((key) => {
-        if (key.startsWith("fingerprint_")) {
-          const dateStr = key.split("_").slice(1).join("_")
-          if (dateStr) {
-            const keyDate = new Date(dateStr)
-            const daysDiff = (today.getTime() - keyDate.getTime()) / (1000 * 60 * 60 * 24)
-            // Keep fingerprints for 30 days to prevent re-counting recent visits
-            if (daysDiff > 30) {
-              localStorage.removeItem(key)
-            }
-          }
+        if (isNewVisit && !hasGlobalVisit) {
+          // Only increment if this is genuinely a new visit
+          const currentTotal = Number.parseInt(localStorage.getItem(totalVisitorsKey) || "0")
+          const newTotal = currentTotal + 1
+          
+          localStorage.setItem(totalVisitorsKey, newTotal.toString())
+          localStorage.setItem(fingerprintKey, fingerprint)
+          localStorage.setItem(lastVisitKey, today)
+          localStorage.setItem(globalKey, "visited")
+          setVisitorCount(newTotal)
+        } else {
+          // Returning visitor
+          const currentTotal = Number.parseInt(localStorage.getItem(totalVisitorsKey) || "1")
+          setVisitorCount(Math.max(currentTotal, 1))
         }
-      })
+
+        // Cleanup old data
+        const cleanupOldData = () => {
+          const keys = Object.keys(localStorage)
+          const today = new Date()
+          keys.forEach((key) => {
+            if (key.startsWith("fingerprint_") || key.startsWith("visitor_")) {
+              const dateStr = key.includes("fingerprint_") 
+                ? key.split("_").slice(1).join("_")
+                : key.split("_").slice(-1)[0]
+              
+              if (dateStr) {
+                const keyDate = new Date(dateStr)
+                const daysDiff = (today.getTime() - keyDate.getTime()) / (1000 * 60 * 60 * 24)
+                if (daysDiff > 30) {
+                  localStorage.removeItem(key)
+                }
+              }
+            }
+          })
+        }
+        cleanupOldData()
+      } catch (error) {
+        console.error('Error updating visitor count:', error)
+        // Fallback to simple counting
+        const stored = localStorage.getItem(totalVisitorsKey)
+        setVisitorCount(stored ? parseInt(stored) : 1)
+      }
     }
-    cleanupOldData()
+
+    updateVisitorCount()
   }, [])
 
   useEffect(() => {
