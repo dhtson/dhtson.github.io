@@ -1,4 +1,4 @@
-name: Deploy Website
+name: Deploy Next.js to GitHub Pages
 
 on:
   push:
