@@ -3,6 +3,7 @@ import fs from "fs"
 import path from "path"
 import matter from "gray-matter"
 import readingTime from "reading-time"
+import { execSync } from "child_process"
 
 export type PostMeta = {
   slug: string
@@ -27,6 +28,26 @@ export type Post = PostMeta & {
 }
 
 const CONTENT_DIR = path.join(process.cwd(), "content", "blogs")
+
+function getGitTimestamps(filePath: string): { created?: string; updated?: string } {
+  try {
+    // Get ISO-8601 author dates for all commits touching this file (newest first)
+    const out = execSync(`git log --follow --format=%aI -- "${filePath.replace(/"/g, '\\"')}"`, {
+      stdio: ["ignore", "pipe", "ignore"],
+      cwd: process.cwd(),
+    })
+    const lines = out.toString().trim().split("\n").filter(Boolean)
+    if (!lines.length) return {}
+    const updated = lines[0] // newest
+    const created = lines[lines.length - 1] // oldest
+    // Ensure valid ISO strings
+    const updatedISO = new Date(updated).toISOString()
+    const createdISO = new Date(created).toISOString()
+    return { created: createdISO, updated: updatedISO }
+  } catch {
+    return {}
+  }
+}
 
 export function getPostSlugs(): string[] {
   if (!fs.existsSync(CONTENT_DIR)) return []
@@ -110,12 +131,24 @@ export function getPostBySlug(slug: string): Post | null {
     : undefined
 
   const stat = fs.statSync(file.filePath)
-  const dateISO: string = (data.date ? new Date(data.date) : stat.birthtime).toISOString()
-  const updatedISO: string | undefined = data.updated
-    ? new Date(data.updated).toISOString()
-    : stat.mtime && stat.mtime.getTime() !== stat.birthtime.getTime()
-    ? stat.mtime.toISOString()
-    : undefined
+  const gitDates = getGitTimestamps(file.filePath)
+  const dateISO: string = data.date
+    ? new Date(data.date).toISOString()
+    : gitDates.created ?? stat.birthtime.toISOString()
+  let updatedISO: string | undefined
+  if (data.updated) {
+    updatedISO = new Date(data.updated).toISOString()
+  } else if (gitDates.updated) {
+    // Only set updated if it differs from created/published
+    if (!gitDates.created || new Date(gitDates.updated).getTime() !== new Date(gitDates.created).getTime()) {
+      if (new Date(gitDates.updated).getTime() !== new Date(dateISO).getTime()) {
+        updatedISO = gitDates.updated
+      }
+    }
+  } else if (stat.mtime && stat.mtime.getTime() !== stat.birthtime.getTime()) {
+    const m = stat.mtime.toISOString()
+    if (new Date(m).getTime() !== new Date(dateISO).getTime()) updatedISO = m
+  }
 
   const rt = readingTime(content)
 
