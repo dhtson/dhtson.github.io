@@ -1,0 +1,180 @@
+1:"$Sreact.fragment"
+2:I[9766,[],""]
+3:I[98924,[],""]
+4:I[59144,["177","static/chunks/app/layout-da75fce8f4ce2285.js"],"SiteFooter"]
+6:I[24431,[],"OutletBoundary"]
+8:I[15278,[],"AsyncMetadataOutlet"]
+a:I[24431,[],"ViewportBoundary"]
+c:I[24431,[],"MetadataBoundary"]
+d:"$Sreact.suspense"
+f:I[57150,[],""]
+:HL["/_next/static/media/569ce4b8f30dc480-s.p.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/_next/static/media/93f479601ee12b01-s.p.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/_next/static/css/c4c3d3f7a4571064.css","style"]
+:HL["/_next/static/css/469f8f2ec7f291c3.css","style"]
+0:{"P":null,"b":"uD9nikDMnlLjKB2NamqkN","p":"","c":["","blogs","DDC-2025-Misc-Farewell-Gift",""],"i":false,"f":[[["",{"children":["blogs",{"children":[["slug","DDC-2025-Misc-Farewell-Gift","d"],{"children":["__PAGE__",{}]}]}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/c4c3d3f7a4571064.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/css/469f8f2ec7f291c3.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"en","className":"dark","suppressHydrationWarning":true,"children":["$","body",null,{"suppressHydrationWarning":true,"className":"__variable_5cfdac __variable_9a8899 font-sans antialiased","children":["$","div",null,{"className":"min-h-screen flex flex-col","children":[["$","main",null,{"className":"flex-1","children":["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L3",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}],["$","$L4",null,{}]]}]}]}]]}],{"children":["blogs",["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L3",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}],{"children":[["slug","DDC-2025-Misc-Farewell-Gift","d"],["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L3",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}],{"children":["__PAGE__",["$","$1","c",{"children":["$L5",null,["$","$L6",null,{"children":["$L7",["$","$L8",null,{"promise":"$@9"}]]}]]}],{},null,false]},null,false]},null,false]},null,false],["$","$1","h",{"children":[null,[["$","$La",null,{"children":"$Lb"}],["$","meta",null,{"name":"next-size-adjust","content":""}]],["$","$Lc",null,{"children":["$","div",null,{"hidden":true,"children":["$","$d",null,{"fallback":null,"children":"$Le"}]}]}]]}],false]],"m":"$undefined","G":["$f",[]],"s":false,"S":true}
+10:I[48877,["330","static/chunks/d3ac728e-8f2bcee79b96c502.js","400","static/chunks/400-69f10ee592c9e2fc.js","744","static/chunks/app/blogs/%5Bslug%5D/page-46eaf08514790245.js"],"BlogHeader"]
+11:I[37946,["330","static/chunks/d3ac728e-8f2bcee79b96c502.js","400","static/chunks/400-69f10ee592c9e2fc.js","744","static/chunks/app/blogs/%5Bslug%5D/page-46eaf08514790245.js"],"MarkdownRenderer"]
+12:T18e3,
+# Misc / Farewell Gift - Writeup DDC 2025
+
+***Farewell Gift***
+
+*500*
+
+*Droplet*
+
+*Daenerys, the lead machine learning engineer at DAD Corporation, has resigned following a conflict with the CEO over the company's direction. As a parting gesture, she left the model she was working on as a "farewell gift". The sample results appear good, but we suspect that something suspicious is going on with this model. Can you find out what it is?*
+
+*Hint 1: Look carefully at the model layers and their attributes*
+
+*Hint 2: This is a fine-tuned model; finding the original model will help (2:00AM hint lmao)*
+
+Ok thì bài này mình thấy nó na ná với HTB Apocalypse mình đã từng chơi nên mình đã cố gắng giải nó, nhưng mà do thứ 7 mình có việc nên về khá trễ, hầu như không giúp được cho team nhiều nên là team mình không thể solve được nó (ờ mấy bạn bảo lý do này nọ thì cũng chịu).
+
+Thì do đã có kinh nghiệm nên mình đã biết một bài CTF ML vận hành thế nào rồi. Điều đầu tiên mình làm là sẽ summary model đó:
+
+```python
+import tensorflow as tf
+from tensorflow import keras
+
+model = keras.models.load_model('models/dad-vision-final.keras')
+
+model.summary()
+```
+
+Gõ `python run.py > summary.txt` thì nó sẽ ra một cái list đúng dài. Nhưng nếu ai có học qua 1 lớp AI trên trường hoặc tự học của Andrew Ng thì cũng nhận ra đây là EfficientNetV2. Sao mình biết? Do cách đặt tên:
+
+```
+block<number><letter>_<operation>
+```
+
+Với lại nếu không biết thì cứ bỏ vào Gia Phát Thịnh (GPT) hỏi nó là “tao đang làm tới đây rồi thì mô hình này giống mô hình gì?” thì nó sẽ trả lời ngay :D
+
+Thì nếu tìm ra EfficientNetV2 rồi thì ở đây cái clue mình không giải ra được là gì?
+
+<img src="image.png" alt="image.png" style="width: 80%; height: auto;" />
+
+Ye mình đã biết nó là EfficientNetV2 rồi nhưng vẫn không biết sao nhét flag ra, lmao. Mình ngồi đọc mấy cái writeup của HTB Apocalypse cũ thì mình chợt nhận ra khá ít người viết writeup này. Nhưng mà chắc do tối rồi nên mình không tỉnh táo. Thôi sáng mai dậy làm tiếp.
+
+Lmao sáng dậy muộn, 10h mới dậy 💀
+
+Nói chung event kết thúc thì cũng kệ, làm lấy kinh nghiệm. 
+
+Mình chợt nhớ ra là: nếu đã là CTF thì người ta phải thay đổi cấu trúc nó, đúng không? Mình hỏi Gia Phát Thịnh là “à tao muốn biết làm sao để tao compare giữa cái EfficientNetV2 gốc với cái này?” thì nó cho mình cái thư viện này:
+
+```python
+from tensorflow.keras.applications import EfficientNetV2S
+```
+
+Không phải chờ đợi, tôi sử dụng tính năng Vibe-Coding mình hiện có:
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.applications import EfficientNetV2S
+
+model = keras.models.load_model('models/dad-vision-final.keras')
+original_model = EfficientNetV2S(weights='imagenet')
+modified_layer_name = None
+
+for dad_layer, original_layer in zip(model.layers, original_model.layers):
+    dad_weights = dad_layer.get_weights()
+    original_weights = original_layer.get_weights()
+
+    if dad_weights and original_weights:
+        for i in range(len(dad_weights)):
+            if not np.array_equal(dad_weights[i], original_weights[i]):
+                modified_layer_name = dad_layer.name
+                print(f"Found modified weights in layer: '{modified_layer_name}'")
+                break
+    if modified_layer_name:
+        break
+
+if not modified_layer_name:
+    print("No modified layers found.")
+```
+
+Thì console báo:
+
+```
+Found modified weights in layer: 'block5i_se_reduce'
+```
+
+Ye, thế là mình có clue tiếp.
+
+Nếu ai học AI rồi thì sẽ biết rằng trong một model, người ta sẽ có Weight với Bias. Ở đây thì mình bắt đầu xuất cả hai ra:
+
+```python
+modified_layer = model.get_layer(modified_layer_name)
+
+weights = modified_layer.get_weights()
+print(f"Weights: {weights}")
+
+bias_vector = weights[1]
+print(f"Bias Vector: {bias_vector}")
+```
+
+Thì console báo:
+
+```
+Weights: [array([[[[-0.04686987,  0.0215106 ,  0.01236106, ...,  0.03371817,
+           0.03543964, -0.00289477],
+         [-0.0655726 , -0.04068068, -0.09533687, ..., -0.00772091,
+          -0.08749958, -0.08933775],
+         [ 0.02095766,  0.00260389,  0.02771965, ...,  0.00584774,
+          -0.00793114,  0.03512393],
+         ...,
+         [-0.00499907, -0.01449113,  0.05294973, ...,  0.00270706,
+           0.0440886 ,  0.0304351 ],
+         [ 0.03093076, -0.02054276, -0.00243449, ..., -0.03394082,
+          -0.01244923, -0.00475881],
+         [ 0.02237011,  0.05259237, -0.04361826, ...,  0.05828479,
+          -0.01201546,  0.01032932]]]],
+      shape=(1, 1, 960, 40), dtype=float32), array([0.0068, 0.0068, 0.0067, 0.0123, 0.0121, 0.0111, 0.0085, 0.0095,
+       0.007 , 0.0111, 0.0117, 0.011 , 0.0068, 0.0095, 0.0077, 0.0121,
+       0.0095, 0.0104, 0.0049, 0.0068, 0.0068, 0.0101, 0.0078, 0.0095,
+       0.0053, 0.0073, 0.0103, 0.011 , 0.0065, 0.0116, 0.0117, 0.0082,
+       0.0101, 0.0095, 0.004 , 0.0094, 0.0111, 0.0094, 0.0041, 0.0125],
+      dtype=float32)]
+Bias Vector: [0.0068 0.0068 0.0067 0.0123 0.0121 0.0111 0.0085 0.0095 0.007  0.0111
+ 0.0117 0.011  0.0068 0.0095 0.0077 0.0121 0.0095 0.0104 0.0049 0.0068
+ 0.0068 0.0101 0.0078 0.0095 0.0053 0.0073 0.0103 0.011  0.0065 0.0116
+ 0.0117 0.0082 0.0101 0.0095 0.004  0.0094 0.0111 0.0094 0.0041 0.0125]
+```
+
+Ở đây, mình thấy là Bias Vector “khá” là ít giá trị, và các giá trị đều rất là lạ là làm tròn cỡ 3-4 chữ số, không như Weight. Nên mình hơi nghi, nếu như nhân với 10.000 thì nó thành số có 2 với 3 chữ số và không quá lớn (bảng ASCII đấy ae ơi). Nên là:
+
+```python
+flag = ""
+for value in bias_vector:
+    char_code = int(round(value * 10000.0))
+    
+    if 32 <= char_code <= 126:
+        flag += chr(char_code)
+
+print(flag)
+```
+
+Và kết quả là:
+
+```
+DDC{yoU_FounD_My_h1DDeN_5IgnAtuRe_(^o^)}
+```
+
+## Lời kết
+
+:D
+
+Anyways, bài oke, Waguri/10
+
+<img src="cc97ddd6-1d5c-4641-a59c-5fb92dc11a7f.png" alt="image.png" style="width: 30%; height: auto;" />
+5:["$","div",null,{"className":"min-h-screen bg-background","children":[["$","$L10",null,{}],["$","main",null,{"className":"container mx-auto px-6 py-12 max-w-3xl pt-24","children":["$","article",null,{"children":[["$","header",null,{"className":"mb-8","children":[["$","div",null,{"className":"mb-3 flex flex-wrap gap-2","children":[[["$","span","CTF",{"className":"px-3 py-1 rounded-full text-xs font-medium border transition-all duration-300 bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20","children":"CTF"}],["$","span","Writeups",{"className":"px-3 py-1 rounded-full text-xs font-medium border transition-all duration-300 bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20","children":"Writeups"}]],false]}],["$","h1",null,{"className":"text-4xl font-bold mb-4 text-balance","children":"Misc / Farewell Gift - Writeup DDC 2025"}],["$","p",null,{"className":"text-muted-foreground mb-4","children":"A writeup on the Misc / Farewell Gift challenge from DDC 2025"}],["$","div",null,{"className":"flex flex-wrap items-center gap-4 text-sm text-muted-foreground","children":[["$","span",null,{"className":"inline-flex items-center gap-1","children":[["$","svg",null,{"className":"h-4 w-4","fill":"none","stroke":"currentColor","viewBox":"0 0 24 24","children":["$","path",null,{"strokeLinecap":"round","strokeLinejoin":"round","strokeWidth":2,"d":"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"}]}]," ","Aug 26, 2025"]}],["$","span",null,{"className":"inline-flex items-center gap-1","children":[["$","svg",null,{"className":"h-4 w-4","fill":"none","stroke":"currentColor","viewBox":"0 0 24 24","children":["$","path",null,{"strokeLinecap":"round","strokeLinejoin":"round","strokeWidth":2,"d":"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"}]}]," ","4 min read"]}],["$","span",null,{"className":"inline-flex items-center gap-1","children":["Updated: ","Aug 26, 2025"]}]]}],[["$","div",null,{"className":"mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground","children":["$","span",null,{"className":"inline-flex items-center gap-1","children":"Language: Vietnamese"}]}],["$","div",null,{"className":"mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground","children":["$","span",null,{"className":"inline-flex items-center gap-1","children":"Author: @harshfeudal"}]}]],["$","div",null,{"className":"mt-4 flex flex-wrap gap-2","children":[["$","span","CTF",{"className":"px-2 py-1 rounded text-xs border transition-all duration-300 bg-teal-500/10 text-teal-500 border-teal-500/20 hover:bg-teal-500/20","children":["#","CTF"]}],["$","span","Machine Learning",{"className":"px-2 py-1 rounded text-xs border transition-all duration-300 bg-teal-500/10 text-teal-500 border-teal-500/20 hover:bg-teal-500/20","children":["#","Machine Learning"]}],["$","span","TensorFlow",{"className":"px-2 py-1 rounded text-xs border transition-all duration-300 bg-teal-500/10 text-teal-500 border-teal-500/20 hover:bg-teal-500/20","children":["#","TensorFlow"]}]]}]]}],["$","div",null,{"className":"prose prose-invert max-w-none","children":["$","$L11",null,{"content":"$12"}]}]]}]}],"$L13"]}]
+14:I[90254,["330","static/chunks/d3ac728e-8f2bcee79b96c502.js","400","static/chunks/400-69f10ee592c9e2fc.js","744","static/chunks/app/blogs/%5Bslug%5D/page-46eaf08514790245.js"],"ScrollToTop"]
+13:["$","$L14",null,{}]
+b:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+7:null
+15:I[80622,[],"IconMark"]
+9:{"metadata":[["$","title","0",{"children":"Harshfeudal - Personal Blog"}],["$","meta","1",{"name":"description","content":"Career updates, CTF writeups, and AI/ML roadmaps by Harshfeudal"}],["$","link","2",{"rel":"icon","href":"/favicon.ico","type":"image/x-icon","sizes":"16x16"}],["$","$L15","3",{}]],"error":null,"digest":"$undefined"}
+e:"$9:metadata"
