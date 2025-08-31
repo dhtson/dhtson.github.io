@@ -64,6 +64,7 @@
     "recharts": "2.15.4",
     "rehype-katex": "latest",
     "rehype-raw": "^7.0.0",
+    "remark-gfm": "4.0.1",
     "remark-math": "latest",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",

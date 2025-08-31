@@ -13,11 +13,7 @@ const nextConfig: NextConfig = {
   // Note: Avoid committing personal/local IPs or dev-only origins.
   // If you need to test on mobile, run the dev server bound to your LAN IP
   // and rely on your OS/firewall settings rather than committing IPs here.
-  allowedDevOrigins: [
-    '192.168.0.100',
-    '192.168.0.*',
-    'localhost',
-  ],
+  allowedDevOrigins: [],
 
   // Configure Turbopack root directory to resolve workspace warning
   turbopack: {
