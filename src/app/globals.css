@@ -167,50 +167,7 @@
     font-family: inherit !important;
   }
 
-  /* Isolate code blocks from any KaTeX interference */
-  .prose .code-container {
-    /* Reset any potential KaTeX inheritance */
-    font-family: var(--font-mono) !important;
-    font-style: normal !important;
-    font-weight: normal !important;
-    text-decoration: none !important;
-    
-    /* Independent styling - no border, the parent already has one */
-    @apply my-0 p-4 rounded-lg;
-    border: none !important;
-    overflow: hidden !important;
-    background: transparent !important;
-    box-shadow: none !important;
-  }
-
-  .prose .code-container * {
-    border: none !important;
-    box-shadow: none !important;
-    /* Complete isolation from external styles but preserve syntax colors */
-    font-family: var(--font-mono) !important;
-    font-style: normal !important;
-    font-weight: normal !important;
-    text-decoration: none !important;
-    /* DON'T override color - let syntax highlighting work */
-  }
-
-  /* Force all nested elements to be completely independent */
-  .prose .code-container > *:not(.absolute) {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    visibility: inherit !important;
-    /* Prevent any KaTeX or external CSS interference but preserve colors */
-    font-family: var(--font-mono) !important;
-    font-style: normal !important;
-    font-weight: normal !important;
-    text-decoration: none !important;
-    /* Let syntax highlighting colors work */
-  }
+  /* End of KaTeX isolation */
 
   /* Inline code: no grey background */
   .prose :not(pre) > code {

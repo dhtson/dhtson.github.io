@@ -1,6 +1,9 @@
 import Image from 'next/image'
 import { ReactNode } from 'react'
 
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
 // Custom components for MDX
 export const mdxComponents = {
   // Custom Image component with optimization
@@ -58,7 +61,7 @@ export const mdxComponents = {
     </p>
   ),
   
-  // Code blocks with better styling
+  // Code blocks with syntax highlighting
   code: ({ children, className }: { children: ReactNode; className?: string }) => {
     const isInline = !className?.includes('language-')
     
@@ -70,11 +73,25 @@ export const mdxComponents = {
       )
     }
     
+    const language = className?.replace('language-', '') || ''
+    const codeString = String(children).trim()
+    
     return (
-      <div className="my-6 rounded-xl overflow-hidden border border-border">
-        <code className={`block p-4 overflow-x-auto text-sm ${className || ''}`}>
-          {children}
-        </code>
+      <div className="my-6 rounded-xl border border-border overflow-hidden bg-[oklch(0.08_0.005_240_/_0.5)]">
+        <SyntaxHighlighter
+          language={language}
+          style={vscDarkPlus}
+          customStyle={{ 
+            margin: 0,
+            borderRadius: 0,
+            padding: '1.5rem',
+            backgroundColor: 'transparent'
+          }}
+          PreTag="div"
+          className="text-sm font-mono"
+        >
+          {codeString}
+        </SyntaxHighlighter>
       </div>
     )
   },

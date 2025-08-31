@@ -5,7 +5,52 @@ import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
 import Image from "next/image"
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+// Use the light Prism build and register only the languages we need
+import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter"
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
+// Prism languages
+import python from "react-syntax-highlighter/dist/esm/languages/prism/python"
+import javascript from "react-syntax-highlighter/dist/esm/languages/prism/javascript"
+import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript"
+import jsx from "react-syntax-highlighter/dist/esm/languages/prism/jsx"
+import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx"
+import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash"
+import powershell from "react-syntax-highlighter/dist/esm/languages/prism/powershell"
+import json from "react-syntax-highlighter/dist/esm/languages/prism/json"
+import yaml from "react-syntax-highlighter/dist/esm/languages/prism/yaml"
+import markdown from "react-syntax-highlighter/dist/esm/languages/prism/markdown"
+import java from "react-syntax-highlighter/dist/esm/languages/prism/java"
+import cpp from "react-syntax-highlighter/dist/esm/languages/prism/cpp"
+import csharp from "react-syntax-highlighter/dist/esm/languages/prism/csharp"
+import go from "react-syntax-highlighter/dist/esm/languages/prism/go"
+import rust from "react-syntax-highlighter/dist/esm/languages/prism/rust"
+import sql from "react-syntax-highlighter/dist/esm/languages/prism/sql"
+import docker from "react-syntax-highlighter/dist/esm/languages/prism/docker"
+import makefile from "react-syntax-highlighter/dist/esm/languages/prism/makefile"
+import markup from "react-syntax-highlighter/dist/esm/languages/prism/markup"
+import css from "react-syntax-highlighter/dist/esm/languages/prism/css"
+
+// Register languages with Prism
+SyntaxHighlighter.registerLanguage("python", python)
+SyntaxHighlighter.registerLanguage("javascript", javascript)
+SyntaxHighlighter.registerLanguage("typescript", typescript)
+SyntaxHighlighter.registerLanguage("jsx", jsx)
+SyntaxHighlighter.registerLanguage("tsx", tsx)
+SyntaxHighlighter.registerLanguage("bash", bash)
+SyntaxHighlighter.registerLanguage("powershell", powershell)
+SyntaxHighlighter.registerLanguage("json", json)
+SyntaxHighlighter.registerLanguage("yaml", yaml)
+SyntaxHighlighter.registerLanguage("markdown", markdown)
+SyntaxHighlighter.registerLanguage("java", java)
+SyntaxHighlighter.registerLanguage("cpp", cpp)
+SyntaxHighlighter.registerLanguage("csharp", csharp)
+SyntaxHighlighter.registerLanguage("go", go)
+SyntaxHighlighter.registerLanguage("rust", rust)
+SyntaxHighlighter.registerLanguage("sql", sql)
+SyntaxHighlighter.registerLanguage("docker", docker)
+SyntaxHighlighter.registerLanguage("makefile", makefile)
+SyntaxHighlighter.registerLanguage("markup", markup)
+SyntaxHighlighter.registerLanguage("css", css)
 
 // Custom colorful theme without grey backgrounds
 const customTheme = {
@@ -34,9 +79,8 @@ const customTheme = {
     wordWrap: 'normal',
     tabSize: '4',
     hyphens: 'none',
-    padding: '1rem',
+    // padding and overflow are handled by Tailwind classes on the PreTag
     margin: '0',
-    overflow: 'auto',
   },
   'comment': { color: '#6272a4' },
   'prolog': { color: '#6272a4' },
@@ -69,6 +113,35 @@ const customTheme = {
   'important': { color: '#ff79c6', fontWeight: 'bold' },
   'bold': { fontWeight: 'bold' },
   'italic': { fontStyle: 'italic' },
+}
+
+// Map user shorthand/aliases to Prism canonical language IDs.
+function normalizeLanguage(input?: string | null): string | undefined {
+  if (!input) return undefined
+  const raw = input.toLowerCase()
+  const map: Record<string, string> = {
+    js: 'javascript', jsx: 'jsx', mjs: 'javascript', cjs: 'javascript',
+    ts: 'typescript', tsx: 'tsx',
+    py: 'python', py3: 'python',
+    sh: 'bash', zsh: 'bash', shell: 'bash', bash: 'bash', console: 'bash',
+    ps: 'powershell', ps1: 'powershell', powershell: 'powershell',
+    rb: 'ruby',
+    c: 'c', h: 'c',
+    cpp: 'cpp', cxx: 'cpp', cc: 'cpp', 'c++': 'cpp', hpp: 'cpp',
+    cs: 'csharp', csharp: 'csharp',
+    go: 'go', golang: 'go',
+    rs: 'rust', rust: 'rust',
+    java: 'java', kotlin: 'kotlin', kt: 'kotlin', swift: 'swift',
+    php: 'php',
+    html: 'markup', xml: 'markup', svg: 'markup',
+    json: 'json', yaml: 'yaml', yml: 'yaml', toml: 'toml', ini: 'ini',
+    md: 'markdown', markdown: 'markdown',
+    sql: 'sql',
+    docker: 'dockerfile', dockerfile: 'dockerfile',
+    make: 'makefile', makefile: 'makefile',
+    txt: 'plaintext', text: 'plaintext', plaintext: 'plaintext'
+  }
+  return map[raw] ?? raw
 }
 
 type Props = {
@@ -165,62 +238,63 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
               {children}
             </a>
           ),
-          code: ({ className, children }: { className?: string; children?: React.ReactNode }) => {
-            const isInline = !className || !className.includes("language-")
-            const codeText = Array.isArray(children) ? children.join("") : String(children ?? "")
-            if (isInline) {
-              return <code className="px-1 text-sm font-mono text-primary">{codeText}</code>
-            }
-            const lang = className?.replace("language-", "").trim() || undefined
+          pre: (props) => {
+            const { children } = props;
+            const codeEl = React.Children.toArray(children)[0] as React.ReactElement<{className?: string, children: string}>;
             
+            if (codeEl?.type !== 'code' || typeof codeEl.props.children !== 'string') {
+                return <pre className="my-6 rounded-xl p-6 border border-border shadow-lg overflow-x-auto" {...props} />;
+            }
+
+            const rawLang = codeEl.props.className?.replace("language-", "").trim() || null;
+            const lang = normalizeLanguage(rawLang);
+            const codeText = codeEl.props.children.replace(/\n$/, '');
+
             const CodeBlock = () => {
-              const [copied, setCopied] = useState(false)
+              const [copied, setCopied] = useState(false);
               const onCopy = async () => {
                 try {
-                  await navigator.clipboard.writeText(codeText.replace(/\n$/, ""))
-                  setCopied(true)
-                  setTimeout(() => setCopied(false), 1500)
+                  await navigator.clipboard.writeText(codeText);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
                 } catch {}
-              }
-              
+              };
+
               return (
-                <div className="code-container relative">
+                <div className="relative my-6">
                   <button
                     type="button"
                     onClick={onCopy}
-                    className="absolute right-0 top-0 z-10 inline-flex items-center gap-1 px-2 py-1 text-xs rounded-bl-md border-l border-b border-border bg-card/80 hover:bg-card hover:border-border/80 transition-all duration-200 cursor-pointer hover:shadow-sm"
+                    className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-border bg-card/80 hover:bg-card hover:border-border/80 transition-all duration-200 cursor-pointer hover:shadow-sm"
                     title="Copy code"
                   >
                     {copied ? "Copied" : "Copy"}
                   </button>
                   <SyntaxHighlighter
                     language={lang}
-                    style={customTheme}
-                    PreTag="div"
-                    CodeTag="code"
-                    className=""
+                    style={vscDarkPlus}
+                    PreTag="pre"
+                    className="rounded-xl p-6 pt-12 border border-border shadow-lg overflow-x-auto"
                     customStyle={{ 
-                      margin: "0", 
-                      background: "transparent", 
-                      padding: "0",
-                      fontSize: "0.875rem",
-                      lineHeight: "1.5",
-                      border: "none",
-                      borderRadius: "0",
-                      boxShadow: "none",
-                      outline: "none",
-                      width: "100%",
-                      overflowX: "auto"
+                      margin: "0",
+                      background: "transparent",
+                      // When no language is provided/recognized, ensure readable plain white text
+                      color: lang ? undefined : 'var(--color-foreground, var(--foreground, #ffffff))'
                     }}
                     wrapLongLines
                   >
                     {codeText}
                   </SyntaxHighlighter>
                 </div>
-              )
+              );
             }
-            
-            return <CodeBlock />
+            return <CodeBlock />;
+          },
+          code: ({ inline, className, children }: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
+            if (inline) {
+              return <code className="px-1 text-sm font-mono text-primary">{String(children)}</code>;
+            }
+            return <code className={className}>{children}</code>;
           },
         }}
       >
