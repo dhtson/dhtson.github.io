@@ -18,4 +18,3 @@ export const MarkdownRenderer: React.FC<MDXProps> = ({ content }) => {
 		</div>
 	)
 }
-

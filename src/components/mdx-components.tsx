@@ -1,8 +1,7 @@
 import Image from 'next/image'
-import { ReactNode } from 'react'
+import { ReactNode, type MouseEvent } from 'react'
 
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+// Remove syntax highlighting; render plain code blocks
 
 // Custom components for MDX
 export const mdxComponents = {
@@ -61,7 +60,7 @@ export const mdxComponents = {
     </p>
   ),
   
-  // Code blocks with syntax highlighting
+  // Code blocks without syntax highlighting + copy button
   code: ({ children, className }: { children: ReactNode; className?: string }) => {
     const isInline = !className?.includes('language-')
     
@@ -73,25 +72,31 @@ export const mdxComponents = {
       )
     }
     
-    const language = className?.replace('language-', '') || ''
     const codeString = String(children).trim()
     
     return (
-      <div className="my-6 rounded-xl border border-border overflow-hidden bg-[oklch(0.08_0.005_240_/_0.5)]">
-        <SyntaxHighlighter
-          language={language}
-          style={vscDarkPlus}
-          customStyle={{ 
-            margin: 0,
-            borderRadius: 0,
-            padding: '1.5rem',
-            backgroundColor: 'transparent'
+      <div className="relative my-6 rounded-xl border border-border bg-[oklch(0.08_0.005_240_/_0.5)]">
+        <button
+          type="button"
+          onClick={async (e: MouseEvent<HTMLButtonElement>) => {
+            try {
+              await navigator.clipboard.writeText(codeString)
+              const btn = e.currentTarget
+              const prev = btn.textContent
+              btn.textContent = 'Copied'
+              setTimeout(() => { btn.textContent = prev || 'Copy' }, 1500)
+            } catch {}
           }}
-          PreTag="div"
-          className="text-sm font-mono"
+          className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-border bg-card/80 hover:bg-card hover:border-border/80 transition-all duration-200 cursor-pointer hover:shadow-sm"
+          title="Copy code"
         >
-          {codeString}
-        </SyntaxHighlighter>
+          Copy
+        </button>
+        <div className="overflow-x-auto">
+          <pre className="m-0 p-6 pt-12 bg-transparent">
+            <code className="text-sm font-mono whitespace-pre">{codeString}</code>
+          </pre>
+        </div>
       </div>
     )
   },

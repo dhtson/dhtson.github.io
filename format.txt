@@ -7,8 +7,6 @@ category:
   - ""
 tags:
   - ...
-date: "2025-08-30" # YYYY-MM-DD
-updated: "2025-08-30" # YYYY-MM-DD
 languages:
     - en
 authors:
