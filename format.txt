@@ -1,8 +1,8 @@
 This is the blog format! Please fill like this before starting a new blog post.
 
 ---
-title: ""
-excerpt: "" # description
+title: ""       <- # Blog title
+excerpt: ""     <- # description
 category: 
   - ""
 tags:
@@ -12,3 +12,5 @@ languages:
 authors:
     - ""
 ---
+
+[Below here is the content of the blog post ...]
