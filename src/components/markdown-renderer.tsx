@@ -14,6 +14,211 @@ type Props = {
 }
 
 export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, showImageCaptions = false }) => {
+  // Custom syntax highlighter
+  const highlightCode = (code: string, language: string): React.ReactNode => {
+    const normalizedLang = language.toLowerCase()
+    
+    // Language aliases
+    const langMap: { [key: string]: string } = {
+      'py': 'python',
+      'js': 'javascript',
+      'ts': 'typescript',
+      'jsx': 'javascript',
+      'tsx': 'typescript',
+      'sh': 'bash',
+      'shell': 'bash',
+    }
+    
+    const lang = langMap[normalizedLang] || normalizedLang
+    
+    if (lang === 'python') {
+      return highlightPython(code)
+    } else if (lang === 'javascript') {
+      return highlightJavaScript(code)
+    } else if (lang === 'typescript') {
+      return highlightTypeScript(code)
+    } else if (lang === 'html') {
+      return highlightHTML(code)
+    } else if (lang === 'css') {
+      return highlightCSS(code)
+    } else if (lang === 'json') {
+      return highlightJSON(code)
+    } else if (lang === 'bash') {
+      return highlightBash(code)
+    } else {
+      return <span style={{ color: '#D4D4D4' }}>{code}</span> // VS Code default text color
+    }
+  }
+
+  const highlightPython = (code: string): React.ReactNode => {
+    const keywords = /\b(def|class|if|elif|else|for|while|try|except|finally|with|as|import|from|return|yield|pass|break|continue|and|or|not|in|is|lambda|async|await|global|nonlocal|assert|del|raise|True|False|None)\b/g
+    const strings = /(["'])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+    const comments = /#.*$/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const decorators = /@[a-zA-Z_][a-zA-Z0-9_]*/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
+      { pattern: strings, className: 'text-[#CE9178]' }, // VS Code string orange
+      { pattern: keywords, className: 'text-[#569CD6]' }, // VS Code keyword blue
+      { pattern: decorators, className: 'text-[#4EC9B0]' }, // VS Code decorator cyan
+      { pattern: functions, className: 'text-[#DCDCAA]' }, // VS Code function yellow
+      { pattern: numbers, className: 'text-[#B5CEA8]' }, // VS Code number light green
+    ])
+  }
+
+  const highlightJavaScript = (code: string): React.ReactNode => {
+    const keywords = /\b(function|const|let|var|if|else|for|while|do|switch|case|default|try|catch|finally|return|break|continue|class|extends|import|export|from|async|await|typeof|instanceof|new|this|super|static|get|set|true|false|null|undefined)\b/g
+    const strings = /(["'`])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const functions = /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
+      { pattern: strings, className: 'text-[#CE9178]' }, // VS Code string orange
+      { pattern: keywords, className: 'text-[#569CD6]' }, // VS Code keyword blue
+      { pattern: functions, className: 'text-[#DCDCAA]' }, // VS Code function yellow
+      { pattern: numbers, className: 'text-[#B5CEA8]' }, // VS Code number light green
+    ])
+  }
+
+  const highlightTypeScript = (code: string): React.ReactNode => {
+    const keywords = /\b(function|const|let|var|if|else|for|while|do|switch|case|default|try|catch|finally|return|break|continue|class|extends|import|export|from|async|await|typeof|instanceof|new|this|super|static|get|set|true|false|null|undefined|interface|type|enum|namespace|module|declare|public|private|protected|readonly|abstract)\b/g
+    const strings = /(["'`])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const functions = /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g
+    const types = /:\s*([A-Z][a-zA-Z0-9_]*)/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
+      { pattern: strings, className: 'text-[#CE9178]' }, // VS Code string orange
+      { pattern: keywords, className: 'text-[#569CD6]' }, // VS Code keyword blue
+      { pattern: types, className: 'text-[#4EC9B0]' }, // VS Code type cyan
+      { pattern: functions, className: 'text-[#DCDCAA]' }, // VS Code function yellow
+      { pattern: numbers, className: 'text-[#B5CEA8]' }, // VS Code number light green
+    ])
+  }
+
+  const highlightHTML = (code: string): React.ReactNode => {
+    const tags = /<\/?[a-zA-Z][a-zA-Z0-9]*[^>]*>/g
+    const attributes = /\s([a-zA-Z-]+)=("[^"]*"|'[^']*')/g
+    const comments = /<!--[\s\S]*?-->/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
+      { pattern: tags, className: 'text-[#569CD6]' }, // VS Code tag blue
+      { pattern: attributes, className: 'text-[#92C5F8]' }, // VS Code attribute light blue
+    ])
+  }
+
+  const highlightCSS = (code: string): React.ReactNode => {
+    const selectors = /[.#]?[a-zA-Z][a-zA-Z0-9-_]*(?=\s*{)/g
+    const properties = /([a-zA-Z-]+)(?=\s*:)/g
+    const values = /:([^;{}]+)/g
+    const comments = /\/\*[\s\S]*?\*\//g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
+      { pattern: selectors, className: 'text-[#D7BA7D]' }, // VS Code selector yellow-tan
+      { pattern: properties, className: 'text-[#92C5F8]' }, // VS Code property light blue
+      { pattern: values, className: 'text-[#CE9178]' }, // VS Code value orange
+    ])
+  }
+
+  const highlightJSON = (code: string): React.ReactNode => {
+    const strings = /"[^"]*"/g
+    const numbers = /\b\d+\.?\d*\b/g
+    const booleans = /\b(true|false|null)\b/g
+    const keys = /"[^"]*"(?=\s*:)/g
+    
+    return tokenizeCode(code, [
+      { pattern: keys, className: 'text-[#9CDCFE]' }, // VS Code JSON key light blue
+      { pattern: strings, className: 'text-[#CE9178]' }, // VS Code string orange
+      { pattern: booleans, className: 'text-[#569CD6]' }, // VS Code boolean blue
+      { pattern: numbers, className: 'text-[#B5CEA8]' }, // VS Code number light green
+    ])
+  }
+
+  const highlightBash = (code: string): React.ReactNode => {
+    const commands = /\b(ls|cd|mkdir|rm|cp|mv|cat|grep|sed|awk|find|chmod|chown|ps|kill|top|sudo|apt|yum|npm|yarn|git|docker|kubectl)\b/g
+    const flags = /-{1,2}[a-zA-Z0-9-]+/g
+    const strings = /(["'])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+    const comments = /#.*$/gm
+    const variables = /\$[a-zA-Z_][a-zA-Z0-9_]*/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
+      { pattern: strings, className: 'text-[#CE9178]' }, // VS Code string orange
+      { pattern: commands, className: 'text-[#569CD6]' }, // VS Code command blue
+      { pattern: flags, className: 'text-[#DCDCAA]' }, // VS Code flag yellow
+      { pattern: variables, className: 'text-[#4EC9B0]' }, // VS Code variable cyan
+    ])
+  }
+
+  const tokenizeCode = (code: string, rules: { pattern: RegExp; className: string }[]): React.ReactNode => {
+    const tokens: { start: number; end: number; className: string; match: string }[] = []
+    
+    rules.forEach(rule => {
+      let match
+      while ((match = rule.pattern.exec(code)) !== null) {
+        tokens.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          className: rule.className,
+          match: match[0]
+        })
+        if (!rule.pattern.global) break
+      }
+    })
+    
+    // Sort tokens by start position
+    tokens.sort((a, b) => a.start - b.start)
+    
+    // Remove overlapping tokens (keep the first one)
+    const filteredTokens = tokens.filter((token, index) => {
+      return !tokens.slice(0, index).some(prevToken => 
+        token.start < prevToken.end && token.end > prevToken.start
+      )
+    })
+    
+    const result: React.ReactNode[] = []
+    let lastIndex = 0
+    
+    filteredTokens.forEach((token, index) => {
+      // Add text before token
+      if (token.start > lastIndex) {
+        result.push(
+          <span key={`text-${index}`} style={{ color: '#D4D4D4' }}>
+            {code.slice(lastIndex, token.start)}
+          </span>
+        )
+      }
+      
+      // Add highlighted token
+      result.push(
+        <span key={`token-${index}`} className={token.className}>
+          {token.match}
+        </span>
+      )
+      
+      lastIndex = token.end
+    })
+    
+    // Add remaining text
+    if (lastIndex < code.length) {
+      result.push(
+        <span key="text-end" style={{ color: '#D4D4D4' }}>
+          {code.slice(lastIndex)}
+        </span>
+      )
+    }
+    
+    return <>{result}</>
+  }
+
   // Pre block with Copy button; separate component to satisfy hooks rule
   const PreBlock: React.FC<React.HTMLAttributes<HTMLPreElement>> = (props) => {
     const { children, className, ...rest } = props
@@ -142,8 +347,26 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
             if (inline) {
               return <code className="px-1 text-sm font-mono text-primary">{String(children)}</code>;
             }
-            // For block code, let the `pre` renderer handle the wrapper & copy button.
-            return <code className={className}>{children}</code>;
+            
+            // Extract language from className (e.g., "language-python" -> "python")
+            const match = /language-(\w+)/.exec(className || '')
+            const language = match ? match[1] : ''
+            const codeString = String(children).replace(/\n$/, '')
+            
+            if (language) {
+              return (
+                <code className={`${className} text-sm font-medium`} style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                  {highlightCode(codeString, language)}
+                </code>
+              )
+            }
+            
+            // For block code without language, render normally
+            return (
+              <code className={`${className} text-sm font-medium`} style={{ fontSize: '0.9rem', color: '#D4D4D4', fontWeight: '500' }}>
+                {children}
+              </code>
+            );
           },
           pre: PreBlock,
         }}
