@@ -219,9 +219,37 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
     return <>{result}</>
   }
 
-  // Pre block with Copy button; separate component to satisfy hooks rule
-  const PreBlock: React.FC<React.HTMLAttributes<HTMLPreElement>> = (props) => {
-    const { children, className, ...rest } = props
+  // Get display name for language
+  const getLanguageDisplayName = (lang: string): string => {
+    const displayNames: { [key: string]: string } = {
+      'python': 'Python',
+      'py': 'Python',
+      'javascript': 'JavaScript',
+      'js': 'JavaScript',
+      'typescript': 'TypeScript',
+      'ts': 'TypeScript',
+      'jsx': 'React',
+      'tsx': 'React',
+      'html': 'HTML',
+      'css': 'CSS',
+      'json': 'JSON',
+      'bash': 'Bash',
+      'sh': 'Shell',
+      'shell': 'Shell',
+      'sql': 'SQL',
+      'xml': 'XML',
+      'yaml': 'YAML',
+      'yml': 'YAML',
+      'markdown': 'Markdown',
+      'md': 'Markdown',
+    }
+    
+    return displayNames[lang.toLowerCase()] || lang.toUpperCase()
+  }
+
+  // Pre block with Copy button and language tag; separate component to satisfy hooks rule
+  const PreBlock: React.FC<React.HTMLAttributes<HTMLPreElement> & { language?: string }> = (props) => {
+    const { children, className, language, ...rest } = props
     const preRef = React.useRef<HTMLPreElement>(null)
     const [copied, setCopied] = useState(false)
 
@@ -241,6 +269,11 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
 
     return (
       <div className="relative my-6">
+        {language && (
+          <div className="absolute left-3 top-3 z-10 px-2 py-1 text-xs rounded-md bg-muted/80 text-muted-foreground font-medium">
+            {getLanguageDisplayName(language)}
+          </div>
+        )}
         <button
           type="button"
           onClick={onCopy}
@@ -343,6 +376,19 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
               {children}
             </a>
           ),
+          pre: (props) => {
+            const { children } = props
+            // Try to extract language from code element
+            let language = ''
+            if (React.isValidElement(children)) {
+              const codeProps = children.props as any
+              if (codeProps?.className) {
+                const match = /language-(\w+)/.exec(codeProps.className || '')
+                language = match ? match[1] : ''
+              }
+            }
+            return <PreBlock {...props} language={language} />
+          },
           code: ({ inline, className, children }: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
             if (inline) {
               return <code className="px-1 text-sm font-mono text-primary">{String(children)}</code>;
@@ -368,7 +414,6 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
               </code>
             );
           },
-          pre: PreBlock,
         }}
       >
         {content}
