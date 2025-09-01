@@ -27,6 +27,31 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
       'tsx': 'typescript',
       'sh': 'bash',
       'shell': 'bash',
+      'rs': 'rust',
+      'c++': 'cpp',
+      'cxx': 'cpp',
+      'cc': 'cpp',
+      'dockerfile': 'docker',
+      'ex': 'elixir',
+      'exs': 'elixir',
+      'kt': 'kotlin',
+      'kts': 'kotlin',
+      'rb': 'ruby',
+      'php': 'php',
+      'go': 'golang',
+      'java': 'java',
+      'cs': 'csharp',
+      'swift': 'swift',
+      'scala': 'scala',
+      'r': 'r',
+      'sql': 'sql',
+      'xml': 'xml',
+      'yaml': 'yaml',
+      'yml': 'yaml',
+      'toml': 'toml',
+      'ini': 'ini',
+      'md': 'markdown',
+      'markdown': 'markdown',
     }
     
     const lang = langMap[normalizedLang] || normalizedLang
@@ -45,6 +70,38 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
       return highlightJSON(code)
     } else if (lang === 'bash') {
       return highlightBash(code)
+    } else if (lang === 'rust') {
+      return highlightRust(code)
+    } else if (lang === 'cpp' || lang === 'c') {
+      return highlightCpp(code)
+    } else if (lang === 'elixir') {
+      return highlightElixir(code)
+    } else if (lang === 'docker') {
+      return highlightDocker(code)
+    } else if (lang === 'java') {
+      return highlightJava(code)
+    } else if (lang === 'golang') {
+      return highlightGo(code)
+    } else if (lang === 'php') {
+      return highlightPhp(code)
+    } else if (lang === 'ruby') {
+      return highlightRuby(code)
+    } else if (lang === 'csharp') {
+      return highlightCsharp(code)
+    } else if (lang === 'kotlin') {
+      return highlightKotlin(code)
+    } else if (lang === 'swift') {
+      return highlightSwift(code)
+    } else if (lang === 'scala') {
+      return highlightScala(code)
+    } else if (lang === 'sql') {
+      return highlightSQL(code)
+    } else if (lang === 'yaml') {
+      return highlightYaml(code)
+    } else if (lang === 'xml') {
+      return highlightXml(code)
+    } else if (lang === 'markdown') {
+      return highlightMarkdown(code)
     } else {
       return <span style={{ color: '#D4D4D4' }}>{code}</span> // VS Code default text color
     }
@@ -155,6 +212,318 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
       { pattern: commands, className: 'text-[#569CD6]' }, // VS Code command blue
       { pattern: flags, className: 'text-[#DCDCAA]' }, // VS Code flag yellow
       { pattern: variables, className: 'text-[#4EC9B0]' }, // VS Code variable cyan
+    ])
+  }
+
+  const highlightRust = (code: string): React.ReactNode => {
+    const keywords = /\b(fn|let|mut|const|static|struct|enum|impl|trait|use|mod|pub|crate|super|self|Self|as|if|else|match|while|for|loop|break|continue|return|yield|async|await|unsafe|where|type|move|ref|in|extern|dyn|true|false)\b/g
+    const types = /\b(i8|i16|i32|i64|i128|isize|u8|u16|u32|u64|u128|usize|f32|f64|bool|char|str|String|Vec|Option|Result|Box|Rc|Arc|HashMap|HashSet)\b/g
+    const strings = /(r#*"[^"]*"#*|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*(?:_[uf](?:8|16|32|64|128|size))?\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const macros = /\b([a-zA-Z_][a-zA-Z0-9_]*!)/g
+    const attributes = /#\[[^\]]*\]/g
+    const lifetimes = /'[a-zA-Z_][a-zA-Z0-9_]*/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
+      { pattern: strings, className: 'text-[#CE9178]' }, // VS Code string orange
+      { pattern: keywords, className: 'text-[#569CD6]' }, // VS Code keyword blue
+      { pattern: types, className: 'text-[#4EC9B0]' }, // VS Code type cyan
+      { pattern: attributes, className: 'text-[#DCDCAA]' }, // VS Code attribute yellow
+      { pattern: macros, className: 'text-[#DCDCAA]' }, // VS Code macro yellow
+      { pattern: lifetimes, className: 'text-[#4EC9B0]' }, // VS Code lifetime cyan
+      { pattern: functions, className: 'text-[#DCDCAA]' }, // VS Code function yellow
+      { pattern: numbers, className: 'text-[#B5CEA8]' }, // VS Code number light green
+    ])
+  }
+
+  const highlightCpp = (code: string): React.ReactNode => {
+    const keywords = /\b(auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|inline|int|long|register|return|short|signed|sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while|class|private|protected|public|virtual|namespace|using|template|typename|operator|new|delete|this|friend|explicit|mutable|constexpr|nullptr|override|final|noexcept|static_assert|decltype|alignof|alignas|thread_local|consteval|constinit|co_await|co_yield|co_return|concept|requires)\b/g
+    const types = /\b(bool|char|int|float|double|void|wchar_t|char8_t|char16_t|char32_t|size_t|ptrdiff_t|nullptr_t|std::string|std::vector|std::map|std::set|std::unique_ptr|std::shared_ptr|std::weak_ptr)\b/g
+    const strings = /(R"[^(]*\([^)]*\)[^"]*"|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*[fFlLuU]*\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const preprocessor = /#\s*[a-zA-Z_][a-zA-Z0-9_]*\b/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: preprocessor, className: 'text-[#C586C0]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: types, className: 'text-[#4EC9B0]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightElixir = (code: string): React.ReactNode => {
+    const keywords = /\b(defmodule|def|defp|defmacro|defstruct|defprotocol|defimpl|do|end|if|unless|cond|case|when|for|with|try|catch|rescue|after|else|fn|receive|send|spawn|import|alias|require|use|quote|unquote|super|true|false|nil|and|or|not|in|when)\b/g
+    const atoms = /:[a-zA-Z_][a-zA-Z0-9_]*[?!]?/g
+    const strings = /("""[\s\S]*?"""|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /#.*$/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*[?!]?)\s*(?=\()/g
+    const modules = /\b[A-Z][a-zA-Z0-9_]*(?:\.[A-Z][a-zA-Z0-9_]*)*\b/g
+    const variables = /@[a-zA-Z_][a-zA-Z0-9_]*/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: atoms, className: 'text-[#4EC9B0]' },
+      { pattern: modules, className: 'text-[#4EC9B0]' },
+      { pattern: variables, className: 'text-[#9CDCFE]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightDocker = (code: string): React.ReactNode => {
+    const instructions = /^\s*(FROM|RUN|CMD|LABEL|MAINTAINER|EXPOSE|ENV|ADD|COPY|ENTRYPOINT|VOLUME|USER|WORKDIR|ARG|ONBUILD|STOPSIGNAL|HEALTHCHECK|SHELL)\b/gm
+    const strings = /(["'])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+    const comments = /#.*$/gm
+    const variables = /\$\{?[a-zA-Z_][a-zA-Z0-9_]*\}?/g
+    const flags = /--[a-zA-Z0-9-]+/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: instructions, className: 'text-[#569CD6]' },
+      { pattern: flags, className: 'text-[#DCDCAA]' },
+      { pattern: variables, className: 'text-[#4EC9B0]' },
+    ])
+  }
+
+  const highlightJava = (code: string): React.ReactNode => {
+    const keywords = /\b(abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while|true|false|null)\b/g
+    const types = /\b([A-Z][a-zA-Z0-9_]*|String|Object|List|Map|Set|ArrayList|HashMap|HashSet|Optional|Stream)\b/g
+    const strings = /("""[\s\S]*?"""|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*[fFdDlL]?\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const annotations = /@[a-zA-Z_][a-zA-Z0-9_]*/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: annotations, className: 'text-[#DCDCAA]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: types, className: 'text-[#4EC9B0]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightGo = (code: string): React.ReactNode => {
+    const keywords = /\b(break|case|chan|const|continue|default|defer|else|fallthrough|for|func|go|goto|if|import|interface|map|package|range|return|select|struct|switch|type|var|true|false|nil|iota)\b/g
+    const types = /\b(bool|byte|complex64|complex128|error|float32|float64|int|int8|int16|int32|int64|rune|string|uint|uint8|uint16|uint32|uint64|uintptr)\b/g
+    const strings = /(```[\s\S]*?```|`[^`]*`|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*[i]?\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: types, className: 'text-[#4EC9B0]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightPhp = (code: string): React.ReactNode => {
+    const keywords = /\b(abstract|and|array|as|break|callable|case|catch|class|clone|const|continue|declare|default|die|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|eval|exit|extends|final|finally|for|foreach|function|global|goto|if|implements|include|include_once|instanceof|insteadof|interface|isset|list|namespace|new|or|print|private|protected|public|require|require_once|return|static|switch|throw|trait|try|unset|use|var|while|xor|yield|true|false|null)\b/g
+    const variables = /\$[a-zA-Z_][a-zA-Z0-9_]*/g
+    const strings = /("""[\s\S]*?"""|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/|#.*$)/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: variables, className: 'text-[#9CDCFE]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightRuby = (code: string): React.ReactNode => {
+    const keywords = /\b(alias|and|begin|break|case|class|def|defined|do|else|elsif|end|ensure|false|for|if|in|module|next|nil|not|or|redo|rescue|retry|return|self|super|then|true|undef|unless|until|when|while|yield|require|include|extend|attr_reader|attr_writer|attr_accessor)\b/g
+    const symbols = /:[a-zA-Z_][a-zA-Z0-9_]*[?!]?/g
+    const strings = /("""[\s\S]*?"""|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'|%[qQrwWxiI]?[^a-zA-Z0-9\s][^]*?[^a-zA-Z0-9\s])/g
+    const comments = /#.*$/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*[?!]?)\s*(?=\()/g
+    const variables = /@@?[a-zA-Z_][a-zA-Z0-9_]*/g
+    const constants = /\b[A-Z][A-Z0-9_]*\b/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: symbols, className: 'text-[#4EC9B0]' },
+      { pattern: constants, className: 'text-[#4EC9B0]' },
+      { pattern: variables, className: 'text-[#9CDCFE]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightCsharp = (code: string): React.ReactNode => {
+    const keywords = /\b(abstract|as|base|bool|break|byte|case|catch|char|checked|class|const|continue|decimal|default|delegate|do|double|else|enum|event|explicit|extern|false|finally|fixed|float|for|foreach|goto|if|implicit|in|int|interface|internal|is|lock|long|namespace|new|null|object|operator|out|override|params|private|protected|public|readonly|ref|return|sbyte|sealed|short|sizeof|stackalloc|static|string|struct|switch|this|throw|true|try|typeof|uint|ulong|unchecked|unsafe|ushort|using|virtual|void|volatile|while|add|alias|ascending|async|await|by|descending|dynamic|equals|from|get|global|group|into|join|let|nameof|on|orderby|partial|remove|select|set|value|var|when|where|yield)\b/g
+    const types = /\b(bool|byte|sbyte|char|decimal|double|float|int|uint|long|ulong|object|short|ushort|string|var|void|dynamic|String|Object|List|Dictionary|Array|IEnumerable|Task|Func|Action)\b/g
+    const strings = /(@"(?:[^"]|"")*"|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*[fFdDmM]?\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const attributes = /\[[^\]]*\]/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: attributes, className: 'text-[#DCDCAA]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: types, className: 'text-[#4EC9B0]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightKotlin = (code: string): React.ReactNode => {
+    const keywords = /\b(abstract|actual|annotation|as|break|by|catch|class|companion|const|constructor|continue|crossinline|data|do|dynamic|else|enum|expect|external|false|field|file|final|finally|for|fun|get|if|import|in|infix|init|inline|inner|interface|internal|is|lateinit|noinline|null|object|open|operator|out|override|package|param|private|property|protected|public|receiver|reified|return|sealed|set|setparam|super|suspend|tailrec|this|throw|true|try|typealias|typeof|val|var|vararg|when|where|while)\b/g
+    const types = /\b(Any|Boolean|Byte|Char|Double|Float|Int|Long|Nothing|Short|String|Unit|Array|List|Map|Set|MutableList|MutableMap|MutableSet)\b/g
+    const strings = /("""[\s\S]*?"""|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*[fFlL]?\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const annotations = /@[a-zA-Z_][a-zA-Z0-9_]*/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: annotations, className: 'text-[#DCDCAA]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: types, className: 'text-[#4EC9B0]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightSwift = (code: string): React.ReactNode => {
+    const keywords = /\b(associatedtype|class|deinit|enum|extension|fileprivate|func|import|init|inout|internal|let|open|operator|private|protocol|public|static|struct|subscript|typealias|var|break|case|continue|default|defer|do|else|fallthrough|for|guard|if|in|repeat|return|switch|where|while|as|catch|false|is|nil|rethrows|super|self|Self|throw|throws|true|try|associativity|convenience|dynamic|didSet|final|get|infix|indirect|lazy|left|mutating|none|nonmutating|optional|override|postfix|precedence|prefix|Protocol|required|right|set|Type|unowned|weak|willSet)\b/g
+    const types = /\b(Any|AnyObject|AnyClass|Bool|Character|Double|Float|Int|String|Void|Array|Dictionary|Set|Optional)\b/g
+    const strings = /("""[\s\S]*?"""|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const attributes = /@[a-zA-Z_][a-zA-Z0-9_]*/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: attributes, className: 'text-[#DCDCAA]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: types, className: 'text-[#4EC9B0]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightScala = (code: string): React.ReactNode => {
+    const keywords = /\b(abstract|case|catch|class|def|do|else|extends|false|final|finally|for|forSome|if|implicit|import|lazy|match|new|null|object|override|package|private|protected|return|sealed|super|this|throw|trait|try|true|type|val|var|while|with|yield)\b/g
+    const types = /\b(Any|AnyRef|AnyVal|Boolean|Byte|Char|Double|Float|Int|Long|Nothing|Null|Short|String|Unit|List|Array|Map|Set|Option|Some|None|Either|Left|Right|Future|Try|Success|Failure)\b/g
+    const strings = /("""[\s\S]*?"""|"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')/g
+    const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*[fFlLdD]?\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const annotations = /@[a-zA-Z_][a-zA-Z0-9_]*/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: annotations, className: 'text-[#DCDCAA]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: types, className: 'text-[#4EC9B0]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightSQL = (code: string): React.ReactNode => {
+    const keywords = /\b(SELECT|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|ON|GROUP|BY|ORDER|HAVING|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DATABASE|INDEX|VIEW|PROCEDURE|FUNCTION|TRIGGER|ALTER|DROP|TRUNCATE|UNION|ALL|DISTINCT|AS|ASC|DESC|LIMIT|OFFSET|CASE|WHEN|THEN|ELSE|END|IF|EXISTS|NOT|NULL|IS|AND|OR|IN|BETWEEN|LIKE|ILIKE|PRIMARY|KEY|FOREIGN|REFERENCES|UNIQUE|CHECK|DEFAULT|AUTO_INCREMENT|IDENTITY|SERIAL)\b/gi
+    const types = /\b(VARCHAR|CHAR|TEXT|INT|INTEGER|BIGINT|SMALLINT|TINYINT|DECIMAL|NUMERIC|FLOAT|DOUBLE|REAL|DATE|TIME|TIMESTAMP|DATETIME|BOOLEAN|BOOL|BINARY|VARBINARY|BLOB|CLOB|JSON|XML|UUID)\b/gi
+    const strings = /(["'])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+    const comments = /(--.*$|\/\*[\s\S]*?\*\/)/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: keywords, className: 'text-[#569CD6]' },
+      { pattern: types, className: 'text-[#4EC9B0]' },
+      { pattern: functions, className: 'text-[#DCDCAA]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightYaml = (code: string): React.ReactNode => {
+    const keys = /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*)\s*:/gm
+    const strings = /(["'])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+    const comments = /#.*$/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const booleans = /\b(true|false|yes|no|on|off|null|~)\b/g
+    const indicators = /^(\s*)(-|\||\>)/gm
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: keys, className: 'text-[#9CDCFE]' },
+      { pattern: indicators, className: 'text-[#569CD6]' },
+      { pattern: booleans, className: 'text-[#569CD6]' },
+      { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightXml = (code: string): React.ReactNode => {
+    const tags = /<\/?[a-zA-Z_][\w:-]*(?:\s[^>]*)?\/?>/g
+    const attributes = /\s([a-zA-Z_][\w:-]*)\s*=/g
+    const strings = /(["'])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+    const comments = /<!--[\s\S]*?-->/g
+    const cdata = /<!\[CDATA\[[\s\S]*?\]\]>/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' },
+      { pattern: cdata, className: 'text-[#CE9178]' },
+      { pattern: strings, className: 'text-[#CE9178]' },
+      { pattern: tags, className: 'text-[#569CD6]' },
+      { pattern: attributes, className: 'text-[#9CDCFE]' },
+    ])
+  }
+
+  const highlightMarkdown = (code: string): React.ReactNode => {
+    const headers = /^#{1,6}\s+.*$/gm
+    const bold = /\*\*[^*]+\*\*|\b__[^_]+__\b/g
+    const italic = /\*[^*]+\*|\b_[^_]+_\b/g
+    const code_inline = /`[^`]+`/g
+    const links = /\[([^\]]+)\]\(([^)]+)\)/g
+    const lists = /^(\s*)[-*+]\s+/gm
+    const blockquotes = /^>\s+.*$/gm
+    
+    return tokenizeCode(code, [
+      { pattern: headers, className: 'text-[#569CD6]' },
+      { pattern: bold, className: 'text-[#DCDCAA] font-bold' },
+      { pattern: italic, className: 'text-[#DCDCAA] italic' },
+      { pattern: code_inline, className: 'text-[#CE9178]' },
+      { pattern: links, className: 'text-[#4EC9B0]' },
+      { pattern: lists, className: 'text-[#569CD6]' },
+      { pattern: blockquotes, className: 'text-[#6A9955]' },
     ])
   }
 
