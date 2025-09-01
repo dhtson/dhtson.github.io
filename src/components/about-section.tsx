@@ -27,7 +27,7 @@ export function AboutSection({ blogPosts }: AboutSectionProps) {
   return (
     <div className="space-y-6">
       <p className="text-muted-foreground leading-relaxed text-lg">
-        I’m Harshfeudal, a student at Vietnamese-German University, currently spending a 6-month exchange at Frankfurt University of Applied Sciences. My main interest is cybersecurity, with some curiosity in machine learning and AI. This space is where I share my journey, studies, and personal learnings.
+        I’m Son, a.k.a Harshfeudal, a student at Vietnamese-German University, currently spending a 6-month exchange at Frankfurt University of Applied Sciences. My main interest is cybersecurity, with some curiosity in machine learning and AI. This space is where I share my journey, studies, and personal learnings.
       </p>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
         <div className="text-center p-6 rounded-lg border border-border/30 hover:border-green-500/50 transition-all duration-300">

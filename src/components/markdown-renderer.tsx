@@ -14,37 +14,24 @@ type Props = {
 }
 
 export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, showImageCaptions = false }) => {
-  // Helper: convert React children to plain text
-  const nodeToText = (node: React.ReactNode): string => {
-    if (typeof node === 'string' || typeof node === 'number') return String(node)
-    if (Array.isArray(node)) return node.map(nodeToText).join('')
-    if (React.isValidElement(node)) {
-      const el = node as React.ReactElement<{ children?: React.ReactNode }>
-      return nodeToText(el.props?.children)
-    }
-    return ''
-  }
-
   // Pre block with Copy button; separate component to satisfy hooks rule
   const PreBlock: React.FC<React.HTMLAttributes<HTMLPreElement>> = (props) => {
     const { children, className, ...rest } = props
-    const arr = React.Children.toArray(children)
-    const codeEl = arr.find((child): child is React.ReactElement<{ className?: string; children?: React.ReactNode }> => {
-      if (!React.isValidElement(child)) return false
-      const t = child.type
-      return typeof t === 'string' && t.toLowerCase() === 'code'
-    })
-
-    const rawText = nodeToText(codeEl?.props?.children)
-    const codeText = rawText.replace(/\n$/, '')
-
+    const preRef = React.useRef<HTMLPreElement>(null)
     const [copied, setCopied] = useState(false)
+
     const onCopy = async () => {
-      try {
-        await navigator.clipboard.writeText(codeText)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
-      } catch {}
+      if (preRef.current) {
+        const codeElement = preRef.current.querySelector('code');
+        const codeText = codeElement ? codeElement.innerText : '';
+        try {
+          await navigator.clipboard.writeText(codeText.replace(/\n$/, ''))
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        } catch (err) {
+          console.error('Failed to copy text: ', err)
+        }
+      }
     }
 
     return (
@@ -57,12 +44,8 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
         >
           {copied ? 'Copied' : 'Copy'}
         </button>
-        <pre {...rest} className={"rounded-xl p-6 pt-12 border border-border shadow-lg overflow-x-auto bg-transparent" + (className ? ` ${className}` : '')}>
-          {codeEl ? (
-            <code className={`text-sm font-mono whitespace-pre ${codeEl.props.className || ''}`}>{codeText}</code>
-          ) : (
-            children
-          )}
+        <pre {...rest} ref={preRef} className={"rounded-xl p-6 pt-12 border border-border shadow-lg overflow-x-auto bg-transparent" + (className ? ` ${className}` : '')}>
+          {children}
         </pre>
       </div>
     )
