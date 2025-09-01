@@ -157,7 +157,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
           {/* Content */}
           <div className="prose prose-invert max-w-none">
-            <MarkdownRenderer content={post.content} />
+            <MarkdownRenderer content={post.content} baseImagePath={`/blogs/${slug}`} />
           </div>
         </article>
       </main>
