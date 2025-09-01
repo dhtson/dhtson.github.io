@@ -3,16 +3,11 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { getAllPosts, getPostBySlug } from "@/lib/blog"
 import { Calendar, Clock } from "@/components/icons"
+import { ClientDate } from "@/components/client-date"
 
 export async function generateStaticParams() {
   const posts = getAllPosts()
   return posts.map((p) => ({ slug: p.slug }))
-}
-
-function formatDate(dateISO: string) {
-  const d = new Date(dateISO)
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
 }
 
 // Match tag color palette used in BlogGrid
@@ -105,10 +100,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <h1 className="text-4xl font-bold mb-4 text-balance">{post.title}</h1>
             <p className="text-muted-foreground mb-4">{post.excerpt}</p>
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1"><Calendar className="h-4 w-4" /> {formatDate(post.date)}</span>
+              <span className="inline-flex items-center gap-1"><Calendar className="h-4 w-4" /> <ClientDate dateString={post.date} /></span>
               <span className="inline-flex items-center gap-1"><Clock className="h-4 w-4" /> {post.readTime}</span>
               {post.updated && (
-                <span className="inline-flex items-center gap-1">Updated: {formatDate(post.updated)}</span>
+                <span className="inline-flex items-center gap-1">Updated: <ClientDate dateString={post.updated} /></span>
               )}
             </div>
             {(post.languages?.length || post.language || (post.authors && post.authors.length > 0)) && (

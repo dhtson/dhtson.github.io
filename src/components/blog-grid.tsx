@@ -1,4 +1,7 @@
+"use client"
+
 import { Calendar, Clock } from "@/components/icons"
+import { ClientDate } from "@/components/client-date"
 
 export interface BlogPostCardData {
   id?: string
@@ -17,21 +20,6 @@ export interface BlogPostCardData {
 interface BlogGridProps {
   posts: BlogPostCardData[]
   // showRecent?: boolean // unused prop
-}
-
-// Consistent date formatting function to avoid hydration issues
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ]
-  
-  const day = date.getDate()
-  const month = months[date.getMonth()]
-  const year = date.getFullYear()
-  
-  return `${month} ${day}, ${year}`
 }
 
 export function BlogGrid({ posts }: BlogGridProps) {
@@ -155,7 +143,7 @@ export function BlogGrid({ posts }: BlogGridProps) {
             <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
               <div className="flex items-center space-x-1 group-hover:text-muted-foreground/80 transition-colors duration-300">
                 <Calendar className="h-3 w-3" />
-                <span>{formatDate(post.date)}</span>
+                <ClientDate dateString={post.date} />
               </div>
               <div className="flex items-center space-x-1 group-hover:text-primary transition-colors duration-300">
                 <Clock className="h-3 w-3" />
