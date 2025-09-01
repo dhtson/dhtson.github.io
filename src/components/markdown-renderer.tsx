@@ -381,7 +381,7 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
             // Try to extract language from code element
             let language = ''
             if (React.isValidElement(children)) {
-              const codeProps = children.props as any
+              const codeProps = children.props as { className?: string }
               if (codeProps?.className) {
                 const match = /language-(\w+)/.exec(codeProps.className || '')
                 language = match ? match[1] : ''
