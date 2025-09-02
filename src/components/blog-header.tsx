@@ -59,6 +59,12 @@ export function BlogHeader({}: BlogHeaderProps) {
               </span>
               <span
                 className="text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+                onClick={() => window.location.href = '/resume'}
+              >
+                Resume
+              </span>
+              <span
+                className="text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
                 onClick={scrollToBlogs}
               >
                 Blogs
@@ -143,6 +149,15 @@ export function BlogHeader({}: BlogHeaderProps) {
                 }}
               >
                 Home
+              </span>
+              <span
+                className="text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer font-medium py-2"
+                onClick={() => {
+                  window.location.href = '/resume'
+                  setIsMobileMenuOpen(false)
+                }}
+              >
+                Resume
               </span>
               <span
                 className="text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer font-medium py-2"
