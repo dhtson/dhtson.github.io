@@ -48,6 +48,7 @@ export default function HomeClient({ blogPosts }: { blogPosts: BlogPostClientMet
 
   return (
     <div className="bg-background relative overflow-hidden">
+      {/* Looking for something? */}
       <BlogHeader />
       <main className="container mx-auto px-6 py-12 max-w-7xl relative pt-24">
         <div className="text-center mb-16">
@@ -112,6 +113,7 @@ export default function HomeClient({ blogPosts }: { blogPosts: BlogPostClientMet
           </section>
         </div>
       </main>
+      
       <ScrollToTop />
     </div>
   )

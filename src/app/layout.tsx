@@ -26,6 +26,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <meta name="format-detection" content="telephone=no" />
+      </head>
       <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         <div className="min-h-screen flex flex-col">
           <main className="flex-1">
