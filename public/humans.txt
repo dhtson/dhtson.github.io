@@ -1,20 +1,15 @@
- _   _                 _      __               _       _ 
-| | | | __ _ _ __ ___  | |__  / _| ___ _   _  __| | __ _| |
-| |_| |/ _` | '__/ __| | '_ \| |_ / _ \ | | |/ _` |/ _` | |
-|  _  | (_| | |  \__ \ | | | |  _|  __/ |_| | (_| | (_| | |
-|_| |_|\__,_|_|  |___/ |_| |_|_|  \___|\__,_|\__,_|\__,_|_|
+/* ABOUT / について */
 
 Developer: Đặng Hữu Trung Sơn (harshfeudal)
 Contact: harshfeudal@gmail.com
 GitHub: https://github.com/harshfeudal
 LinkedIn: https://www.linkedin.com/in/dhtson/
 
-/* SITE */
+/* TECHNOLOGIES / 技術 */
 
-Last Update: 2025/09/03
 Built with: Next.js, TypeScript, Tailwind CSS
 
-/* HUH? */
+/* HUH? / なんだって？ */
 
 Looking for something? Here's a little gift for curious minds:
 harshfeudal{w31c0m3_t0_my_b10g}

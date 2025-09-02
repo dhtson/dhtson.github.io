@@ -31,7 +31,7 @@ export default function ResumePage() {
               <div className="flex flex-wrap justify-center gap-4 text-muted-foreground">
                 {Object.entries(resume.contacts).map(([key, value], index) => (
                   <div key={key} className="flex items-center gap-4">
-                    {index > 0 && <span>•</span>}
+                    {index > 0 && <span className="hidden md:inline">•</span>}
                     {key === 'email' ? (
                       <a href={`mailto:${value}`} className="text-primary hover:underline">
                         {value}
