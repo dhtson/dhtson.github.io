@@ -4,6 +4,27 @@ import { ResumeRenderer } from "@/components/resume-renderer"
 import { getResume } from "@/lib/resume"
 import { notFound } from "next/navigation"
 
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const month = months[date.getMonth()]
+  const day = date.getDate()
+  const year = date.getFullYear()
+  
+  // Add ordinal suffix (st, nd, rd, th)
+  const getOrdinalSuffix = (day: number): string => {
+    if (day >= 11 && day <= 13) return 'th'
+    switch (day % 10) {
+      case 1: return 'st'
+      case 2: return 'nd'
+      case 3: return 'rd'
+      default: return 'th'
+    }
+  }
+  
+  return `${month} ${day}${getOrdinalSuffix(day)}, ${year}`
+}
+
 export default function ResumePage() {
   const resume = getResume()
   
@@ -32,23 +53,13 @@ export default function ResumePage() {
                 {Object.entries(resume.contacts).map(([key, value], index) => (
                   <div key={key} className="flex items-center gap-4">
                     {index > 0 && <span className="hidden md:inline">•</span>}
-                    {key === 'email' ? (
-                      <a href={`mailto:${value}`} className="text-primary hover:underline">
-                        {value}
-                      </a>
-                    ) : key === 'github' || key === 'linkedin' || key === 'website' ? (
-                      <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        {value}
-                      </a>
-                    ) : (
-                      <span>{value}</span>
-                    )}
+                    <span>{value}</span>
                   </div>
                 ))}
               </div>
             )}
             <p className="text-sm text-muted-foreground mt-4">
-              Last updated: {new Date(resume.lastUpdated).toLocaleDateString()}
+              Last updated: {formatDate(resume.lastUpdated)}
             </p>
           </div>
 
