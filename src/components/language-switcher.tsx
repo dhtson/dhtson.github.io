@@ -2,15 +2,33 @@
 
 import Link from "next/link"
 import { ChevronDown, Globe } from "@/components/icons"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 
 interface LanguageSwitcherProps {
-  availableLanguages: Array<{ code: string; name: string; slug: string }>
+  availableLanguages: Array<{ name: string; slug: string }>
   currentSlug: string
 }
 
 export function LanguageSwitcher({ availableLanguages, currentSlug }: LanguageSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
   
   // Find current language
   const currentLanguage = availableLanguages.find(lang => lang.slug === currentSlug)
@@ -20,13 +38,12 @@ export function LanguageSwitcher({ availableLanguages, currentSlug }: LanguageSw
   }
 
   return (
-    <div className="relative inline-block text-left">
+    <div className="relative inline-block text-left" ref={dropdownRef}>
       <div>
         <button
           type="button"
           className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold rounded-xl hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl text-sm"
           onClick={() => setIsOpen(!isOpen)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
         >
           <Globe className="h-4 w-4" />
           <span>{currentLanguage.name}</span>
