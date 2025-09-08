@@ -4,6 +4,51 @@ import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { getAllPosts, getPostBySlug } from "@/lib/blog"
 import { Calendar, Clock } from "@/components/icons"
 import { ClientDate } from "@/components/client-date"
+import { ShareButton } from "@/components/share-button"
+import type { Metadata } from "next"
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const post = getPostBySlug(slug)
+  
+  if (!post) {
+    return {
+      title: "Post Not Found",
+      description: "The requested blog post could not be found.",
+    }
+  }
+
+  const categories = post.categories || (post.category ? [post.category] : [])
+  const keywords = [
+    ...categories,
+    ...(post.tags || []),
+    "cybersecurity",
+    "CTF",
+    "writeup",
+    "harshfeudal"
+  ]
+
+  return {
+    title: post.title,
+    description: post.excerpt,
+    keywords: keywords.join(", "),
+    authors: [{ name: "Đặng Hữu Trung Sơn (harshfeudal)" }],
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      type: "article",
+      publishedTime: post.date,
+      modifiedTime: post.updated || post.date,
+      authors: ["Đặng Hữu Trung Sơn"],
+      tags: post.tags,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt,
+    },
+  }
+}
 
 export async function generateStaticParams() {
   const posts = getAllPosts()
@@ -148,6 +193,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 ))}
               </div>
             )}
+            
+            {/* Share Button */}
+            <div className="mt-4">
+              <ShareButton title={post.title} />
+            </div>
           </header>
 
           {/* Content */}

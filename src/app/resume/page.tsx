@@ -3,6 +3,23 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { getResume } from "@/lib/resume"
 import { notFound } from "next/navigation"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Resume",
+  description: "Computer Science Bachelor Student at Vietnamese German University. Passionate about cybersecurity, CTF competitions, and machine learning. Currently on exchange at Frankfurt University of Applied Sciences.",
+  keywords: ["resume", "computer science", "cybersecurity", "student", "Vietnamese German University", "Frankfurt University", "CTF", "machine learning"],
+  openGraph: {
+    title: "Resume - Đặng Hữu Trung Sơn",
+    description: "Computer Science Bachelor Student specializing in cybersecurity and machine learning.",
+    type: "profile",
+  },
+  twitter: {
+    card: "summary",
+    title: "Resume - Đặng Hữu Trung Sơn",
+    description: "Computer Science Bachelor Student specializing in cybersecurity and machine learning.",
+  },
+}
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)

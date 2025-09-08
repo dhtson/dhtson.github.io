@@ -2,6 +2,23 @@ import { BlogHeader } from "@/components/blog-header"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { getAllPosts } from "@/lib/blog"
 import BlogsListClient from "@/components/blogs-list-client"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Blogs",
+  description: "Explore my journey in cybersecurity, CTF writeups, daily experiences, and personal insights. Deep dives into machine learning challenges, security research, and technical tutorials.",
+  keywords: ["cybersecurity", "CTF", "writeups", "machine learning", "security", "tutorials", "hacking", "programming"],
+  openGraph: {
+    title: "Blogs - Harshfeudal",
+    description: "Explore my journey in cybersecurity, CTF writeups, daily experiences, and personal insights.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Blogs - Harshfeudal",
+    description: "Explore my journey in cybersecurity, CTF writeups, daily experiences, and personal insights.",
+  },
+}
 
 export default function BlogsPage() {
   const posts = getAllPosts()
