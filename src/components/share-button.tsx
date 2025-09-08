@@ -19,22 +19,27 @@ export function ShareButton({ title, url, className = "" }: ShareButtonProps) {
       url: shareUrl,
     }
 
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
     // Try using Web Share API first (mobile devices)
-    if (navigator.share && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    if (navigator.share && isMobile) {
       try {
         await navigator.share(shareData)
-        return
+        return // Don't show "Copied!" on mobile when share menu is used
       } catch (error) {
         // Fall back to clipboard if share fails
         console.log("Share failed, falling back to clipboard")
       }
     }
 
-    // Fall back to copying to clipboard
+    // Fall back to copying to clipboard (desktop or mobile fallback)
     try {
       await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      // Only show "Copied!" feedback on desktop or when mobile share fails
+      if (!isMobile || !navigator.share) {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
     } catch (error) {
       // Final fallback for older browsers
       const textArea = document.createElement("textarea")
@@ -48,8 +53,11 @@ export function ShareButton({ title, url, className = "" }: ShareButtonProps) {
       
       try {
         document.execCommand("copy")
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
+        // Only show "Copied!" feedback on desktop or when mobile share fails
+        if (!isMobile || !navigator.share) {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        }
       } catch (err) {
         console.error("Failed to copy to clipboard:", err)
       }
