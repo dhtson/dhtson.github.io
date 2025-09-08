@@ -19,11 +19,9 @@ export interface BlogPostCardData {
 
 interface BlogGridProps {
   posts: BlogPostCardData[]
-  // showRecent?: boolean // unused prop
 }
 
 export function BlogGrid({ posts }: BlogGridProps) {
-  // const showRecent = posts.length <= 3 // unused variable commented out
   const few = posts.length <= 2
   const count = posts.length
   let gridCols = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"

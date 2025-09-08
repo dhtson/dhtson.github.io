@@ -1,0 +1,81 @@
+---
+title: "[Vi]: Web / Passwordless - Imaginary CTF 2025"
+excerpt: "A writeup on the Web / Passwordless challenge from Imaginary CTF 2025"
+category:
+  - "CTF"
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Web"
+  - "2025"
+languages:
+    - vi
+authors:
+    - "harshfeudal"
+---
+
+*passwordless (100pts)*
+
+*by Ciaran*
+
+*Description*
+
+*Didn't have time to implement the email sending feature but that's ok, the site is 100% secure if nobody knows their password to sign in!*
+
+*http://passwordless.chal.imaginaryctf.org (link might expired)*
+
+Okay thì ở thử thách này khá là thú vị, là mình tìm cách đăng nhập pass mà không cần biết mật khẩu (đúng nghĩa “Passwordless”), do là tính năng gửi email chứa mật khẩu chưa có được setup. Nói chung lỗi này hơi phi thực tế xíu, khá là hiếm gặp (chắc mấy nhóc mới học dev web chưa học backend thì may ra :D). Well nhưng mà đề cho thì phải giải thoi~
+
+Bài này có cho file `index.js` để các bạn xem, nhưng do dài quá nên mình không mention ở đây, có thể sau này mình sẽ add attachments cho các bạn coi lại challenge này (nếu mình có free bộ nhớ).
+
+Okay thì đây là các yếu tố mình tìm ra được:
+
+- **Chuẩn Hóa Email (Email Normalization):** web sử dụng thư viện `normalize-email` để chuẩn hóa địa chỉ email người dùng cung cấp. Ví dụ he, một email như `user.name+alias@gmail.com` sẽ được chuẩn hóa thành `username@gmail.com`. Email này được dùng làm định danh duy nhất cho người dùng trong cơ sở dữ liệu.
+- **Logic Tạo Mật Khẩu:** Khi register, một mật khẩu tạm thời được tạo ra bằng cách nối **email gốc (chưa chuẩn hóa)** do người dùng nhập vào với một chuỗi ngẫu nhiên dài 32 ký tự hexa. Mật khẩu này sau đó được băm (hash) bằng `bcrypt` và lưu vào cơ sở dữ liệu. Source ở chỗ sao mình biết thì bên dưới đây:
+
+```jsx
+const initialPassword = req.body.email + crypto.randomBytes(16).toString('hex')
+```
+
+→ Điểm yếu của thuật toán `bcrypt` là nó sẽ cắt ngắn (truncate) mật khẩu đầu vào ở độ dài 71 ký tự. Bất kỳ ký tự nào sau ký tự thứ 71 đều sẽ bị bỏ qua trong cả quá trình tạo hash và so sánh mật khẩu. Nói tới đây là biết được sắp làm trò con bò gì ròi đó :D
+
+Ye, chúng ta có thể register email rất dài hơn 71 kí tự, và tự động nó sẽ chỉnh lại thành một email ngắn gọn hơn. Do mật khẩu được tạo từ email gốc siêu siêu dài này, nên là phần phía sau của kí tự thứ 71 đó sẽ bị limit và bị `bcrypt` bỏ qua, nên là … biết ròi đó 🐧
+
+Thế thì nhào qua phần đăng kí tài khoản. Ở mục email thì nhập:
+
+```
+exploit+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb@gmail.com
+```
+
+Ye và thế gửi đi thoi~
+
+![image.png](image.png)
+
+Xong quay lại bước đăng nhập:
+
+- Ở mục điền email thì các bạn điền: `exploit@gmail.com`
+- Ở mục pass, các bạn nhập:
+
+```
+exploit+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb@gmail.co
+```
+
+![image.png](image%201.png)
+
+Và thế là omedetou~
+
+Các bạn đã login :D
+
+![image.png](image%202.png)
+
+Và flag là:
+
+```
+ictf{8ee2ebc4085927c0dc85f07303354a05}
+```
+
+## Lời kết
+
+Bài oke, ez/10
+
+<img src="image%203.png" alt="image.png" style="width: 30%; height: auto;" />

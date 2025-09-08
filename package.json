@@ -2,6 +2,7 @@
   "name": "dhtson.github.io",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "npm run link-images && next dev --turbopack",
     "copy-images": "node scripts/copy-images.js",

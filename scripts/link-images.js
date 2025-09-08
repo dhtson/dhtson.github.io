@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // Function to create symbolic links for blog directories
 function createSymbolicLinks() {
@@ -16,6 +16,24 @@ function createSymbolicLinks() {
   // Ensure public/blogs directory exists
   if (!fs.existsSync(publicBlogsDir)) {
     fs.mkdirSync(publicBlogsDir, { recursive: true });
+  }
+
+  // Clean up any orphaned symlinks first
+  const existingItems = fs.readdirSync(publicBlogsDir);
+  for (const item of existingItems) {
+    const itemPath = path.join(publicBlogsDir, item);
+    try {
+      if (fs.lstatSync(itemPath).isSymbolicLink()) {
+        const targetPath = fs.readlinkSync(itemPath);
+        const absoluteTarget = path.isAbsolute(targetPath) ? targetPath : path.join(path.dirname(itemPath), targetPath);
+        if (!fs.existsSync(absoluteTarget)) {
+          console.log(`🧹 Removing orphaned symlink: ${item}`);
+          fs.unlinkSync(itemPath);
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️  Could not check symlink ${item}: ${error.message}`);
+    }
   }
   
   // Get all blog directories
