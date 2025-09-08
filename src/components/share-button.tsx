@@ -26,7 +26,7 @@ export function ShareButton({ title, url, className = "" }: ShareButtonProps) {
       try {
         await navigator.share(shareData)
         return // Don't show "Copied!" on mobile when share menu is used
-      } catch (error) {
+      } catch {
         // Fall back to clipboard if share fails
         console.log("Share failed, falling back to clipboard")
       }
@@ -40,7 +40,7 @@ export function ShareButton({ title, url, className = "" }: ShareButtonProps) {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       }
-    } catch (error) {
+    } catch {
       // Final fallback for older browsers
       const textArea = document.createElement("textarea")
       textArea.value = shareUrl
@@ -69,7 +69,7 @@ export function ShareButton({ title, url, className = "" }: ShareButtonProps) {
   return (
     <button
       onClick={handleShare}
-      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-border/20 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-all duration-300 hover:scale-105 ${className}`}
+      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border-2 border-gray-300 dark:border-gray-600 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-accent/10 hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-300 hover:scale-105 ${className}`}
       title={copied ? "Link copied!" : "Share this post"}
     >
       {copied ? (

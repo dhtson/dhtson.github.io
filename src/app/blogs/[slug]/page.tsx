@@ -1,7 +1,8 @@
 import { BlogHeader } from "@/components/blog-header"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
-import { getAllPosts, getPostBySlug } from "@/lib/blog"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { getPostBySlug, getAllPostSlugs } from "@/lib/blog"
 import { Calendar, Clock } from "@/components/icons"
 import { ClientDate } from "@/components/client-date"
 import { ShareButton } from "@/components/share-button"
@@ -51,8 +52,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export async function generateStaticParams() {
-  const posts = getAllPosts()
-  return posts.map((p) => ({ slug: p.slug }))
+  // Get ALL post slugs including all language versions for static generation
+  const allSlugs = getAllPostSlugs()
+  return allSlugs.map((slug: string) => ({ slug }))
 }
 
 // Match tag color palette used in BlogGrid
@@ -119,6 +121,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <main className="container mx-auto px-6 py-12 max-w-3xl pt-24">
         <article>
           <header className="mb-8">
+            {/* Language Switcher */}
+            {post.availableLanguages && (
+              <div className="mb-4 flex justify-end">
+                <LanguageSwitcher 
+                  availableLanguages={post.availableLanguages} 
+                  currentSlug={post.slug} 
+                />
+              </div>
+            )}
+
             {(post.categories?.length || post.category) && (
               <div className="mb-3 flex flex-wrap gap-2">
                 {(() => {
@@ -151,12 +163,17 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 <span className="inline-flex items-center gap-1">Updated: <ClientDate dateString={post.updated} /></span>
               )}
             </div>
-            {(post.languages?.length || post.language || (post.authors && post.authors.length > 0)) && (
+            {(post.languages?.length || post.language || post.detectedLanguage || (post.authors && post.authors.length > 0)) && (
               <>
-                {(post.languages?.length || post.language) && (
+                {(post.languages?.length || post.language || post.detectedLanguage) && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
                       {(() => {
+                        // Prioritize detected language from folder name
+                        if (post.detectedLanguage) {
+                          return `Language: ${post.detectedLanguage}`
+                        }
+                        // Fall back to frontmatter languages
                         const langs = post.languages && post.languages.length > 0 ? post.languages : (post.language ? [post.language] : [])
                         const shown = langs.slice(0, 2)
                         const extra = Math.max(0, langs.length - shown.length)
