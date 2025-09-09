@@ -1,0 +1,128 @@
+---
+title: "Forensic / Obfuscated-1 - Imaginary CTF 2025"
+excerpt: "A writeup on the Forensic / Obfuscated-1 challenge from Imaginary CTF 2025"
+category:
+  - "CTF"
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Forensic"
+  - "Windows"
+  - "2025"
+authors:
+    - "harshfeudal"
+---
+
+## Đề bài
+
+*obfuscated-1 (100pts)*
+
+*Description*
+
+*I installed every old software known to man... The flag is the VNC password, wrapped in `ictf{}`.*
+
+## Hướng giải
+
+Để mà nói thì bài này mình không hiểu tại sao nhiều người giải được đến thế … tại vì kĩ thuật không đến nỗi quá dễ để làm 🤧
+
+Sau khi mình unzip ra thì mình thấy đây là một folder chứa user của người dùng trên Win:
+
+<img src="image.png" alt="image.png" style="width: 80%; height: auto;" />
+
+Ở đây, điều đầu tiên mình nên làm khi khám phá thứ gì đó chính là khui từ file registry :D
+
+Đề có cho file `NTUSER.DAT` thì nhiệm vụ mình chỉ cần việc `Win + R` và gõ `regedit` là xong:
+
+<img src="image%201.png" alt="image.png" style="width: 60%; height: auto;" />
+
+Sau khi mở Registry Editor rồi thì nếu các bạn newbie về các dùng này thì mình hướng dẫn luôn :D
+
+Các bạn ấn `HKEY_USERS` này:
+
+<img src="image%202.png" alt="image.png" style="width: 50%; height: auto;" />
+
+Sau đó nhìn lên mục `File` > `Load Hive...` :
+
+<img src="image%203.png" alt="image.png" style="width: 50%; height: auto;" />
+
+Các bạn chọn đúng cái file `NTUSER.DAT` của đề cho nha (chọn chính file trên máy của mấy bạn thì chịu đấy 🐧), và đặt tên. Ở đây thì mình sẽ đặt tên là `CTFHive` cho dễ tìm:
+
+<img src="image%204.png" alt="image.png" style="width: 70%; height: auto;" />
+
+Click `OK` là các bạn sẽ thấy trong danh mục `HKEY_USERS` sẽ có cái `CTFHive` :
+
+<img src="image%205.png" alt="image.png" style="width: 50%; height: auto;" />
+
+Nếu các bạn cứ thích khám phá thì các bạn có thể lục tung cái folder đó cũng được :D
+
+Do đề có mention phải tìm VNC password nên là mình sẽ tìm đến gì nó liên quan đến đó. Thì sau một hồi lục tung cái folder lên thì cũng thấy được cái mục đó nó nằm ở `Software` :
+
+<img src="image%206.png" alt="image.png" style="width: 50%; height: auto;" />
+
+Ấn vào mục `TightVNC` sẽ hiện thêm folder `Server` . Sau khi mình ấn tiếp `Server` thì nó sẽ hiện ra như sau:
+
+<img src="image%207.png" alt="image.png" style="width: 70%; height: auto;" />
+
+Không khó để mình nhận ra ở đây có cái registry `Password` :
+
+```
+7e 9b 31 12 48 b7 c8 a8
+```
+
+Lấy được cái này rồi thì giải mã đây~
+
+Nhưng làm sau để giải nó 🥲
+
+Mình struggle chỗ này hơi lâu đến khi hỏi Google về “VNC decrypt” thì ông nội này cũng cho mình tham khảo cái repo này. Link dưới đây:
+
+[https://github.com/billchaison/VNCDecrypt](https://github.com/billchaison/VNCDecrypt)
+
+Sau khi đọc câu này từ repo:
+
+> *Assume the string from the .vnc file is `d7a514d8c556aade`*
+> 
+> *`echo -n d7a514d8c556aade | xxd -r -p | openssl enc -des-cbc --nopad --nosalt -K e84ad660c4721ae0 -iv 0000000000000000 -d -provider legacy -provider default | hexdump -Cv`*
+
+thì mình đã có thêm clue để giải. Ở đây các bạn có thể thấy `e84ad660c4721ae0` là mã cố định, nghĩa là mình chỉ cần biết một dữ kiện là ra.
+
+Mình đã nhờ ChatGPT viết hộ mình (vibe-coding đi ae 🐧):
+
+```python
+from Crypto.Cipher import DES
+import binascii
+
+# your REG_BINARY value from regedit
+blob_hex = "7e9b311248b7c8a8"
+
+# TightVNC's fixed DES key
+key = binascii.unhexlify("e84ad660c4721ae0")
+blob = binascii.unhexlify(blob_hex)
+
+dec = DES.new(key, DES.MODE_ECB).decrypt(blob)
+
+print("Decrypted bytes:", dec)
+print("Password:", dec.decode('latin1', errors='replace').strip())
+```
+
+Sau khi run xong thì mình ra được:
+
+```
+Decrypted bytes: b'Slay4U!!'
+Password: Slay4U!!
+```
+
+Đề bài kêu wrap flag sau khi đã tìm ra được password, thế thì flag chính là:
+
+```
+ictf{Slay4U!!}
+```
+
+## Lời kết
+
+Bài này thấy nhiều technique lắm mà sao ai ai cũng solve ra dữ vậy :v
+
+Đánh giá bài này: technique/10
+
+(Cái hình không liên quan nhưng thôi kệ cứ để :D)
+
+<img src="image%208.png" alt="image.png" style="width: 30%; height: auto;" />
