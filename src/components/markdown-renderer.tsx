@@ -41,6 +41,8 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
       'go': 'golang',
       'java': 'java',
       'cs': 'csharp',
+      'pl': 'perl',
+      'perl': 'perl',
       'swift': 'swift',
       'scala': 'scala',
       'r': 'r',
@@ -86,6 +88,8 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
       return highlightPhp(code)
     } else if (lang === 'ruby') {
       return highlightRuby(code)
+    } else if (lang === 'perl') {
+      return highlightPerl(code)
     } else if (lang === 'csharp') {
       return highlightCsharp(code)
     } else if (lang === 'kotlin') {
@@ -372,6 +376,28 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
       { pattern: variables, className: 'text-[#9CDCFE]' },
       { pattern: functions, className: 'text-[#DCDCAA]' },
       { pattern: numbers, className: 'text-[#B5CEA8]' },
+    ])
+  }
+
+  const highlightPerl = (code: string): React.ReactNode => {
+    const keywords = /\b(use|package|sub|my|our|local|if|elsif|else|unless|while|until|for|foreach|do|last|next|redo|return|die|warn|print|printf|say|chomp|chop|split|join|push|pop|shift|unshift|splice|sort|reverse|map|grep|keys|values|each|exists|delete|defined|undef|ref|bless|new|can|isa|AUTOLOAD|BEGIN|END|INIT|CHECK|DESTROY)\b/g
+    const strings = /(["'])((?:(?!\1)[^\\]|\\.)*)(\1)|(`[^`]*`)/g
+    const comments = /#.*$/gm
+    const numbers = /\b\d+\.?\d*\b/g
+    const variables = /(\$\w+|\@\w+|\%\w+|\$\d+|\$[&`'+*.\/<>?\\^|~=!@#$%()])/g
+    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+    const regexes = /\/(?:[^\/\\\n]|\\.)+\/[gimsx]*/g
+    const pragmas = /\b(strict|warnings|utf8|feature|constant|lib|vars|subs|base|parent|Exporter|Carp)\b/g
+    
+    return tokenizeCode(code, [
+      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
+      { pattern: strings, className: 'text-[#CE9178]' }, // VS Code string orange
+      { pattern: regexes, className: 'text-[#D16969]' }, // VS Code regex red
+      { pattern: keywords, className: 'text-[#569CD6]' }, // VS Code keyword blue
+      { pattern: pragmas, className: 'text-[#C586C0]' }, // VS Code pragma purple
+      { pattern: variables, className: 'text-[#9CDCFE]' }, // VS Code variable light blue
+      { pattern: functions, className: 'text-[#DCDCAA]' }, // VS Code function yellow
+      { pattern: numbers, className: 'text-[#B5CEA8]' }, // VS Code number light green
     ])
   }
 
