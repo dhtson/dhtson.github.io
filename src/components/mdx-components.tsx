@@ -1,8 +1,6 @@
 import Image from 'next/image'
 import { ReactNode, type MouseEvent } from 'react'
 
-// Remove syntax highlighting; render plain code blocks
-
 // Custom components for MDX
 export const mdxComponents = {
   // Custom Image component with optimization

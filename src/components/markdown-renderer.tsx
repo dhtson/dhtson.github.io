@@ -656,8 +656,8 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
           await navigator.clipboard.writeText(codeText.replace(/\n$/, ''))
           setCopied(true)
           setTimeout(() => setCopied(false), 1500)
-        } catch (err) {
-          console.error('Failed to copy text: ', err)
+        } catch {
+          // Failed to copy text
         }
       }
     }
@@ -690,6 +690,33 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
         remarkPlugins={[remarkMath]}
         rehypePlugins={[[rehypeKatex, { strict: "ignore", throwOnError: false }], rehypeRaw]}
         components={{
+          div: (props) => {
+            const { style, children, ...restProps } = props as { 
+              style?: React.CSSProperties | string; 
+              children?: React.ReactNode;
+              [key: string]: unknown;
+            }
+            
+            // Parse style if it's a string
+            let divStyle: React.CSSProperties = {}
+            if (style) {
+              if (typeof style === 'string') {
+                const styleObj: Record<string, string> = {}
+                style.split(';').forEach(rule => {
+                  const [prop, value] = rule.split(':').map(s => s.trim())
+                  if (prop && value) {
+                    const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+                    styleObj[camelProp] = value
+                  }
+                })
+                divStyle = styleObj as React.CSSProperties
+              } else {
+                divStyle = style
+              }
+            }
+            
+            return <div {...restProps} style={divStyle}>{children}</div>
+          },
           img: (props) => {
             const { src, alt, style, width, height } = props as unknown as { 
               src?: string; 
@@ -697,6 +724,7 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
               style?: React.CSSProperties | string;
               width?: string | number;
               height?: string | number;
+              [key: string]: unknown;
             }
             if (!src) return null
             let resolved: string
@@ -746,14 +774,14 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
             if (height) imageHeight = typeof height === 'string' ? parseInt(height) || 630 : height
 
             return (
-              <span className="block my-6">
+              <span className="my-6" style={{ display: 'inline-block', width: '100%', textAlign: 'inherit' }}>
                 <Image 
                   src={resolved} 
                   alt={alt || ""} 
                   width={imageWidth} 
                   height={imageHeight} 
                   className="rounded-lg" 
-                  style={imageStyle}
+                  style={{ ...imageStyle, display: 'inline-block' }}
                 />
                 {showImageCaptions && alt && (
                   <span className="block text-center text-sm text-muted-foreground mt-2">{alt}</span>

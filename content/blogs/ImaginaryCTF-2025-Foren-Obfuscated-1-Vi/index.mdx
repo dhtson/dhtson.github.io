@@ -27,41 +27,57 @@ authors:
 
 Sau khi mình unzip ra thì mình thấy đây là một folder chứa user của người dùng trên Win:
 
-<img src="image.png" alt="image.png" style="width: 80%; height: auto;" />
+<div style="text-align: center;">
+  <img src="image.png" alt="image.png" style="width: 80%; height: auto;" />
+</div>
 
 Ở đây, điều đầu tiên mình nên làm khi khám phá thứ gì đó chính là khui từ file registry :D
 
 Đề có cho file `NTUSER.DAT` thì nhiệm vụ mình chỉ cần việc `Win + R` và gõ `regedit` là xong:
 
-<img src="image%201.png" alt="image.png" style="width: 60%; height: auto;" />
+<div style="text-align: center;">
+  <img src="image%201.png" alt="image.png" style="width: 50%; height: auto;" />
+</div>
 
 Sau khi mở Registry Editor rồi thì nếu các bạn newbie về các dùng này thì mình hướng dẫn luôn :D
 
 Các bạn ấn `HKEY_USERS` này:
 
-<img src="image%202.png" alt="image.png" style="width: 50%; height: auto;" />
+<div style="text-align: center;">
+  <img src="image%202.png" alt="image.png" style="width: 50%; height: auto;" />
+</div>
 
 Sau đó nhìn lên mục `File` > `Load Hive...` :
 
-<img src="image%203.png" alt="image.png" style="width: 50%; height: auto;" />
+<div style="text-align: center;">
+  <img src="image%203.png" alt="image.png" style="width: 50%; height: auto;" />
+</div>
 
 Các bạn chọn đúng cái file `NTUSER.DAT` của đề cho nha (chọn chính file trên máy của mấy bạn thì chịu đấy 🐧), và đặt tên. Ở đây thì mình sẽ đặt tên là `CTFHive` cho dễ tìm:
 
-<img src="image%204.png" alt="image.png" style="width: 70%; height: auto;" />
+<div style="text-align: center;">
+  <img src="image%204.png" alt="image.png" style="width: 70%; height: auto;" />
+</div>
 
 Click `OK` là các bạn sẽ thấy trong danh mục `HKEY_USERS` sẽ có cái `CTFHive` :
 
-<img src="image%205.png" alt="image.png" style="width: 50%; height: auto;" />
+<div style="text-align: center;">
+  <img src="image%205.png" alt="image.png" style="width: 50%; height: auto;" />
+</div>
 
 Nếu các bạn cứ thích khám phá thì các bạn có thể lục tung cái folder đó cũng được :D
 
 Do đề có mention phải tìm VNC password nên là mình sẽ tìm đến gì nó liên quan đến đó. Thì sau một hồi lục tung cái folder lên thì cũng thấy được cái mục đó nó nằm ở `Software` :
 
-<img src="image%206.png" alt="image.png" style="width: 50%; height: auto;" />
+<div style="text-align: center;">
+  <img src="image%206.png" alt="image.png" style="width: 50%; height: auto;" />
+</div>
 
 Ấn vào mục `TightVNC` sẽ hiện thêm folder `Server` . Sau khi mình ấn tiếp `Server` thì nó sẽ hiện ra như sau:
 
-<img src="image%207.png" alt="image.png" style="width: 70%; height: auto;" />
+<div style="text-align: center;">
+  <img src="image%207.png" alt="image.png" style="width: 70%; height: auto;" />
+</div>
 
 Không khó để mình nhận ra ở đây có cái registry `Password` :
 

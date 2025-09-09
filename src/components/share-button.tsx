@@ -28,7 +28,6 @@ export function ShareButton({ title, url, className = "" }: ShareButtonProps) {
         return // Don't show "Copied!" on mobile when share menu is used
       } catch {
         // Fall back to clipboard if share fails
-        console.log("Share failed, falling back to clipboard")
       }
     }
 
@@ -58,8 +57,8 @@ export function ShareButton({ title, url, className = "" }: ShareButtonProps) {
           setCopied(true)
           setTimeout(() => setCopied(false), 2000)
         }
-      } catch (err) {
-        console.error("Failed to copy to clipboard:", err)
+      } catch {
+        // Failed to copy to clipboard
       }
       
       document.body.removeChild(textArea)

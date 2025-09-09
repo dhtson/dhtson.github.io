@@ -106,6 +106,19 @@
   .prose {
   @apply max-w-none text-foreground leading-relaxed;
   }
+  
+  /* Allow HTML divs to override alignment */
+  .prose div[style*="text-align: center"] {
+    text-align: center !important;
+  }
+  
+  .prose div[style*="text-align: center"] img,
+  .prose div[style*="text-align: center"] span {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: block !important;
+  }
+  
   /* Larger paragraph spacing for readability */
   .prose p {
     @apply my-5 leading-8;
