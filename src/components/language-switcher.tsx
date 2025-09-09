@@ -54,25 +54,20 @@ export function LanguageSwitcher({ availableLanguages, currentSlug }: LanguageSw
       </div>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-xl bg-background border border-border shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden">
+        <div className="absolute right-0 z-50 mt-2 w-36 origin-top-right rounded-xl bg-background border-2 border-border shadow-lg ring-1 ring-black ring-opacity-10 focus:outline-none overflow-hidden">
           <div className="py-1">
             {availableLanguages.map((language) => (
               <Link
                 key={language.slug}
                 href={`/blogs/${language.slug}`}
-                className={`block px-4 py-3 text-sm transition-all duration-300 hover:scale-[1.02] ${
+                className={`block px-3 py-2 text-sm transition-all duration-300 hover:scale-[1.02] ${
                   language.slug === currentSlug 
                     ? 'bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold' 
                     : 'text-foreground hover:bg-gradient-to-r hover:from-primary/10 hover:to-accent/10 hover:text-primary'
                 }`}
                 onClick={() => setIsOpen(false)}
               >
-                <span className="flex items-center gap-2">
-                  <span>{language.name}</span>
-                  {language.slug === currentSlug && (
-                    <span className="text-xs text-white/90">• Current</span>
-                  )}
-                </span>
+                <span>{language.name}</span>
               </Link>
             ))}
           </div>
