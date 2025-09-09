@@ -1,0 +1,108 @@
+---
+title: "Web / Pearl - Imaginary CTF 2025"
+excerpt: "A writeup on the Web / Pearl challenge from Imaginary CTF 2025"
+category:
+  - "CTF"
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Web"
+  - "Perl"
+  - "Command Injection"
+  - "2025"
+authors:
+    - "harshfeudal"
+---
+
+## Đề bài
+
+*pearl (100pts)*
+
+*Description*
+
+*I used perl to make my pearl shop. Soon, we will expand to selling Perler bead renditions of Perlin noise.*
+
+*http://pearl.chal.imaginaryctf.org (link might expired)*
+
+## Hướng giải
+
+Bài này thì ở mức easy thoi nhưng mà viết cho có blog :D
+
+Bài này thì đề có cho source code nên cũng khá là đơn giản thoi. Mọi người có thể nhìn sơ qua cái cấu trúc của đề cho để có thêm gợi ý tìm flag trên server:
+
+![image.png](image.png)
+
+Thì có thể thấy ở đây, cái file flag.txt nó nằm ngay luôn file pearl (có đuôi `.pl`). Pearl là một ngôn ngữ lập trình web khá phổ biến (ngày xưa), hiện thì vẫn có một số trang còn duy trì nó chứ không hẳn là quá dead, nhưng khá hiếm.
+
+Bài này thì việc bạn nhìn source code ra thì bạn phải nhìn luôn cả file `Dockerfile`, đây là một file đóng vai trò như một con thuyền để “ship” project của bạn lên trên server host cho tiện.
+
+Mình sẽ đi sâu vào `Dockerfile` trước khi đọc source code để cho biết cách setup server:
+
+```docker
+WORKDIR /app
+COPY server.pl /app/server.pl
+COPY files/ /app/files/
+COPY flag.txt /
+RUN mv /flag.txt /flag-$(md5sum /flag.txt | awk '{print $1}').txt
+```
+
+Có thể để ý dòng cuối cùng của đoạn code trên, các bạn sẽ thấy câu `/flag.txt /flag-$(md5sum /flag.txt | awk '{print $1}').txt` nghĩa là nó đổi tên của cái file, do đó các bạn có tìm ra được lỗ hỏng đi chăng nữa mà search đúng cái tên `flag.txt` thì sẽ không bao giờ ra. Cái tên của file đó lúc sau sẽ được đổi thành `flag-{...}` với trong ngoặc đó là cái gì gì đó của cái mã MD5 đã được encrypt.
+
+Nhìn vào trong file `server.pl` thì các bạn sẽ thấy những điều như sau:
+
+- Đề sử dụng hàm `open` hai đối số của Perl để đọc tệp tin (`open(my $fh, $fullpath)`). Đây là một hàm nguy hiểm vì nó có thể diễn giải các ký tự đặc biệt trong đường dẫn tệp để thực thi lệnh hệ thống.
+- Đề còn có một bộ lọc bằng biểu thức chính quy (regex) để ngăn chặn các ký tự độc hại. Nhưng nó lại không chặn kí tự xuống dòng (hẹ hẹ hẹ). Nếu các bạn không biết thì đây:
+
+```perl
+if ($fullpath =~ /\.\.|[,\`\)\(;&]|\|.*\|/) {
+    $c->send_error(RC_BAD_REQUEST, "Invalid path");
+    next;
+}
+```
+
+Nhiêu đây dữ kiện thì đủ để exploit ròi~
+Thật ra ở đây, server luôn thêm tiền tố `./files/` vào đường dẫn. Nếu chúng ta chỉ gửi payload như `cat /flag-*.txt|`, thì server sẽ chuyển thành `./files/cat /flag-*.txt`, và command này sẽ thất bại do `./files/cat` không tồn tại trên đó. Chính vì thế mà mindset chúng ta sẽ gửi là như sau:
+
+```
+
+sh -c "cat /flag-*.txt"
+|
+```
+
+Không phải mình cố tình spacing ở trên đâu, mà là phải xuống dòng như vật á 🥲
+
+Và để ý là mình phải có cái dấu `|` để activate cái lệnh của mình, không có cái dấu đó là bị báo lỗi ngay, do đây là command injection trong Perl, bạn có thể tìm hiểu tại [đây](https://github.com/payloadbox/command-injection-payload-list).
+
+Hồi lúc nãy mình có nói một số cái command đã bị blacklist, do đó các bạn phải dùng đến kĩ thuật URL encoding. 
+
+Link: [https://www.urlencoder.org/](https://www.urlencoder.org/)
+
+Giờ bạn chỉ cần paste vào đây:
+
+![image.png](image%201.png)
+
+Xong ấn encode sẽ ra được chuỗi kí tự sau:
+
+```
+%0Ash%20-c%20%22cat%20%2Fflag-%2A.txt%22%0A%7C
+```
+
+Tới đây bạn paste thẳng vào link như vậy:
+
+```
+http://pearl.chal.imaginaryctf.org/%0Ash%20-c%20%22cat%20%2Fflag-%2A.txt%22%0A%7C
+```
+
+Và bạn sẽ hiện ra một trang có chứa flag :D
+
+```
+ictf{uggh_why_do_people_use_perl_1f023b129a22}
+```
+
+## Lời kết
+
+Đây là một trong những bài vận dụng command injection tiêu biểu mà các bạn nên thử nghiệm nếu chưa biết, tuy nhiên thì những trang web ngày nay sẽ không còn bị hiện trạng như vậy nữa (hoặc có nhưng ở mức độ cực hiếm) :D
+
+easy/10
+
+<img src="image%202.png" alt="image.png" style="width: 30%; height: auto;" />

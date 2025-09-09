@@ -122,86 +122,99 @@ export default function BlogsListClient({ posts }: { posts: BlogPostCardData[] }
 
         {/* Advanced filters: tags, languages, authors */}
         {(tags.length > 0 || languages.length > 0 || authors.length > 0) && (
-          <div className="grid gap-4 md:grid-cols-3">
-            {tags.length > 0 && (
-              <div className="bg-card/50 border border-border/80 rounded-lg p-3">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Tags</div>
-                <div className="flex flex-wrap gap-2">
-                  {displayTags.map(t => {
-                    const active = selectedTags.includes(t)
-                    return (
-                      <button
-                        key={t}
-                        onClick={() => setSelectedTags(prev => active ? prev.filter(x => x !== t) : [...prev, t])}
-                        className={`px-2 py-1 rounded text-xs border transition-all duration-300 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground hover:bg-muted/80 border-border/30"}`}
-                      >
-                        #{t}
-                      </button>
-                    )
-                  })}
+          <div className="space-y-4">
+            {/* Tags and Authors centered */}
+            {(tags.length > 0 || authors.length > 0) && (
+              <div className="flex justify-center">
+                <div className="grid gap-4 md:grid-cols-2 max-w-4xl w-full">
+                  {tags.length > 0 && (
+                    <div className="bg-card/50 border border-border/80 rounded-lg p-3">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Tags</div>
+                      <div className="flex flex-wrap gap-2">
+                        {displayTags.map(t => {
+                          const active = selectedTags.includes(t)
+                          return (
+                            <button
+                              key={t}
+                              onClick={() => setSelectedTags(prev => active ? prev.filter(x => x !== t) : [...prev, t])}
+                              className={`px-2 py-1 rounded text-xs border transition-all duration-300 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground hover:bg-muted/80 border-border/30"}`}
+                            >
+                              #{t}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {tags.length > MAX_TAGS && (
+                        <button
+                          className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
+                          onClick={() => setShowAllTags(v => !v)}
+                        >
+                          {showAllTags ? "Show less" : `Show more (+${tags.length - MAX_TAGS})`}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {authors.length > 0 && (
+                    <div className="bg-card/50 border border-border/80 rounded-lg p-3">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Authors</div>
+                      <div className="flex flex-wrap gap-2">
+                        {displayAuthors.map(a => {
+                          const active = selectedAuthors.includes(a)
+                          return (
+                            <button
+                              key={a}
+                              onClick={() => setSelectedAuthors(prev => active ? prev.filter(x => x !== a) : [...prev, a])}
+                              className={`px-2 py-1 rounded text-xs border transition-all duration-300 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground hover:bg-muted/80 border-border/30"}`}
+                            >
+                              {a}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {authors.length > MAX_AUTHORS && (
+                        <button
+                          className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
+                          onClick={() => setShowAllAuthors(v => !v)}
+                        >
+                          {showAllAuthors ? "Show less" : `Show more (+${authors.length - MAX_AUTHORS})`}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {tags.length > MAX_TAGS && (
-                  <button
-                    className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
-                    onClick={() => setShowAllTags(v => !v)}
-                  >
-                    {showAllTags ? "Show less" : `Show more (+${tags.length - MAX_TAGS})`}
-                  </button>
-                )}
               </div>
             )}
+            
+            {/* Languages section below, also centered */}
             {languages.length > 0 && (
-              <div className="bg-card/50 border border-border/80 rounded-lg p-3">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Languages</div>
-                <div className="flex flex-wrap gap-2">
-                  {displayLanguages.map(l => {
-                    const active = selectedLanguages.includes(l)
-                    return (
+              <div className="flex justify-center">
+                <div className="max-w-2xl w-full">
+                  <div className="bg-card/50 border border-border/80 rounded-lg p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Languages</div>
+                    <div className="flex flex-wrap gap-2">
+                      {displayLanguages.map(l => {
+                        const active = selectedLanguages.includes(l)
+                        return (
+                          <button
+                            key={l}
+                            onClick={() => setSelectedLanguages(prev => active ? prev.filter(x => x !== l) : [...prev, l])}
+                            className={`px-2 py-1 rounded text-xs border transition-all duration-300 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground hover:bg-muted/80 border-border/30"}`}
+                          >
+                            {l}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {languages.length > MAX_LANGS && (
                       <button
-                        key={l}
-                        onClick={() => setSelectedLanguages(prev => active ? prev.filter(x => x !== l) : [...prev, l])}
-                        className={`px-2 py-1 rounded text-xs border transition-all duration-300 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground hover:bg-muted/80 border-border/30"}`}
+                        className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
+                        onClick={() => setShowAllLanguages(v => !v)}
                       >
-                        {l}
+                        {showAllLanguages ? "Show less" : `Show more (+${languages.length - MAX_LANGS})`}
                       </button>
-                    )
-                  })}
+                    )}
+                  </div>
                 </div>
-                {languages.length > MAX_LANGS && (
-                  <button
-                    className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
-                    onClick={() => setShowAllLanguages(v => !v)}
-                  >
-                    {showAllLanguages ? "Show less" : `Show more (+${languages.length - MAX_LANGS})`}
-                  </button>
-                )}
-              </div>
-            )}
-            {authors.length > 0 && (
-              <div className="bg-card/50 border border-border/80 rounded-lg p-3">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Authors</div>
-                <div className="flex flex-wrap gap-2">
-                  {displayAuthors.map(a => {
-                    const active = selectedAuthors.includes(a)
-                    return (
-                      <button
-                        key={a}
-                        onClick={() => setSelectedAuthors(prev => active ? prev.filter(x => x !== a) : [...prev, a])}
-                        className={`px-2 py-1 rounded text-xs border transition-all duration-300 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground hover:bg-muted/80 border-border/30"}`}
-                      >
-                        {a}
-                      </button>
-                    )
-                  })}
-                </div>
-                {authors.length > MAX_AUTHORS && (
-                  <button
-                    className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
-                    onClick={() => setShowAllAuthors(v => !v)}
-                  >
-                    {showAllAuthors ? "Show less" : `Show more (+${authors.length - MAX_AUTHORS})`}
-                  </button>
-                )}
               </div>
             )}
           </div>

@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-
-function ChevronUp({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-    </svg>
-  )
-}
+import { ChevronUp } from "@/components/icons"
 
 export function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false)
