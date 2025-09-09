@@ -60,8 +60,6 @@ if ($fullpath =~ /\.\.|[,\`\)\(;&]|\|.*\|/) {
 
 This is enough information to create an exploit.
 
----
-
 Actually, the server always prepends the `./files/` prefix to the path. If we just send a payload like `cat /flag-*.txt|`, the server will turn it into `./files/cat /flag-*.txt`, and this command will fail because `./files/cat` doesn't exist.
 
 Therefore, our approach for the payload should be as follows:
