@@ -51,7 +51,7 @@ Có thể để ý dòng cuối cùng của đoạn code trên, các bạn sẽ 
 Nhìn vào trong file `server.pl` thì các bạn sẽ thấy những điều như sau:
 
 - Đề sử dụng hàm `open` hai đối số của Perl để đọc tệp tin (`open(my $fh, $fullpath)`). Đây là một hàm nguy hiểm vì nó có thể diễn giải các ký tự đặc biệt trong đường dẫn tệp để thực thi lệnh hệ thống.
-- Đề còn có một bộ lọc bằng biểu thức chính quy (regex) để ngăn chặn các ký tự độc hại. Nhưng nó lại không chặn kí tự xuống dòng (hẹ hẹ hẹ). Nếu các bạn không biết thì đây:
+- Đề còn có một bộ lọc bằng biểu thức chính quy (regex) để ngăn chặn các ký tự độc hại, nhưng ở đây nó lại không chặn kí tự xuống dòng (hẹ hẹ hẹ). In case các bạn không biết thì đây:
 
 ```perl
 if ($fullpath =~ /\.\.|[,\`\)\(;&]|\|.*\|/) {
@@ -61,6 +61,7 @@ if ($fullpath =~ /\.\.|[,\`\)\(;&]|\|.*\|/) {
 ```
 
 Nhiêu đây dữ kiện thì đủ để exploit ròi~
+
 Thật ra ở đây, server luôn thêm tiền tố `./files/` vào đường dẫn. Nếu chúng ta chỉ gửi payload như `cat /flag-*.txt|`, thì server sẽ chuyển thành `./files/cat /flag-*.txt`, và command này sẽ thất bại do `./files/cat` không tồn tại trên đó. Chính vì thế mà mindset chúng ta sẽ gửi là như sau:
 
 ```
