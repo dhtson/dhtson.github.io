@@ -95,43 +95,24 @@ const LANGUAGE_MAP: Record<string, string> = {
   lo: 'Lao',
 }
 
-// Function to detect language from slug and extract base name
-function parseSlugForLanguage(slug: string): { baseName: string; languageCode: string | null } {
-  // Look for language pattern at the end: -[language code]
-  const match = slug.match(/^(.+)-([a-z]{2,3}(?:-[a-z]{2,4})?)$/i)
-  if (match) {
-    const [, baseName, langCode] = match
-    const normalizedLangCode = langCode.toLowerCase()
-    // Check if it's a valid language code
-    if (LANGUAGE_MAP[normalizedLangCode]) {
-      return { baseName, languageCode: normalizedLangCode }
-    }
-  }
-  // If no language detected, return the slug as base name
-  return { baseName: slug, languageCode: null }
-}
-
-// Function to get all available languages for a base name
-function getAvailableLanguages(baseName: string, allSlugs: string[]): Array<{ code: string; name: string; slug: string }> {
+// Function to get all available languages for a post slug
+function getAvailableLanguagesForSlug(slug: string): Array<{ code: string; name: string; slug: string }> {
   const availableLanguages: Array<{ code: string; name: string; slug: string }> = []
+  const folderPath = path.join(CONTENT_DIR, slug)
   
-  for (const slug of allSlugs) {
-    const { baseName: slugBaseName, languageCode } = parseSlugForLanguage(slug)
-    if (slugBaseName === baseName) {
-      if (languageCode) {
-        availableLanguages.push({
-          code: languageCode,
-          name: LANGUAGE_MAP[languageCode],
-          slug: slug
-        })
-      } else {
-        // If no language code detected, assume it's the default (English)
-        availableLanguages.push({
-          code: 'en',
-          name: 'English',
-          slug: slug
-        })
-      }
+  if (!fs.existsSync(folderPath)) return availableLanguages
+  
+  const files = fs.readdirSync(folderPath)
+  const langFiles = files.filter(file => file.match(/^[a-z]{2,3}(-[a-z]{2,4})?\.(mdx?|md)$/i))
+  
+  for (const file of langFiles) {
+    const langCode = file.split('.')[0].toLowerCase()
+    if (LANGUAGE_MAP[langCode]) {
+      availableLanguages.push({
+        code: langCode,
+        name: LANGUAGE_MAP[langCode],
+        slug: slug
+      })
     }
   }
   
@@ -179,25 +160,69 @@ export function getPostSlugs(): string[] {
     .filter((name) => fs.statSync(path.join(CONTENT_DIR, name)).isDirectory())
 }
 
-function getFileForSlug(slug: string): { filePath: string; format: "md" | "mdx" } | null {
+function getFileForSlug(slug: string, language?: string): { filePath: string; format: "md" | "mdx" } | null {
+  // If language is specified, look for [language].mdx/md files
+  if (language) {
+    const mdx = path.join(CONTENT_DIR, slug, `${language}.mdx`)
+    const md = path.join(CONTENT_DIR, slug, `${language}.md`)
+    if (fs.existsSync(mdx)) return { filePath: mdx, format: "mdx" }
+    if (fs.existsSync(md)) return { filePath: md, format: "md" }
+  }
+  
+  // Fallback to index files (for backward compatibility)
   const mdx = path.join(CONTENT_DIR, slug, "index.mdx")
   const md = path.join(CONTENT_DIR, slug, "index.md")
   if (fs.existsSync(mdx)) return { filePath: mdx, format: "mdx" }
   if (fs.existsSync(md)) return { filePath: md, format: "md" }
+  
+  // If no index files, try to find any language file (default to first available)
+  const folderPath = path.join(CONTENT_DIR, slug)
+  if (fs.existsSync(folderPath)) {
+    const files = fs.readdirSync(folderPath)
+    const langFiles = files.filter(file => file.match(/^[a-z]{2,3}(-[a-z]{2,4})?\.(mdx?|md)$/i))
+    if (langFiles.length > 0) {
+      // Sort to prefer English first, then Vietnamese, then alphabetically
+      langFiles.sort((a, b) => {
+        const aLang = a.split('.')[0]
+        const bLang = b.split('.')[0]
+        if (aLang === 'en' && bLang !== 'en') return -1
+        if (bLang === 'en' && aLang !== 'en') return 1
+        if ((aLang === 'vi' || aLang === 'vn') && bLang !== 'vi' && bLang !== 'vn') return -1
+        if ((bLang === 'vi' || bLang === 'vn') && aLang !== 'vi' && aLang !== 'vn') return 1
+        return aLang.localeCompare(bLang)
+      })
+      
+      const selectedFile = langFiles[0]
+      const filePath = path.join(folderPath, selectedFile)
+      const format = selectedFile.endsWith('.mdx') ? 'mdx' : 'md' as const
+      return { filePath, format }
+    }
+  }
+  
   return null
 }
 
-export function getPostBySlug(slug: string): Post | null {
-  const file = getFileForSlug(slug)
+export function getPostBySlug(slug: string, language?: string): Post | null {
+  const file = getFileForSlug(slug, language)
   if (!file) return null
 
   const raw = fs.readFileSync(file.filePath, "utf8")
   const { content, data } = matter(raw)
 
-  // Parse slug for language detection
-  const { baseName, languageCode } = parseSlugForLanguage(slug)
-  const allSlugs = getPostSlugs()
-  const availableLanguages = getAvailableLanguages(baseName, allSlugs)
+  // Get available languages for this slug
+  const availableLanguages = getAvailableLanguagesForSlug(slug)
+  
+  // If language was specified but file doesn't exist, try to get default language
+  let actualLanguageCode = language
+  if (language && !availableLanguages.find(lang => lang.code === language)) {
+    // Fallback to first available language
+    if (availableLanguages.length > 0) {
+      actualLanguageCode = availableLanguages[0].code
+    }
+  } else if (!language && availableLanguages.length > 0) {
+    // If no language specified, use the first available (which is sorted by priority)
+    actualLanguageCode = availableLanguages[0].code
+  }
 
   const title: string = data.title ?? slug.replace(/-/g, " ")
   const excerpt: string = data.excerpt ?? ""
@@ -276,8 +301,8 @@ export function getPostBySlug(slug: string): Post | null {
     readTime: `${Math.max(1, Math.round(rt.minutes))} min read`,
     content,
     format: file.format,
-    baseName,
-    detectedLanguage: languageCode ? LANGUAGE_MAP[languageCode] : undefined,
+    baseName: slug, // Now baseName is just the slug since we removed language suffixes
+    detectedLanguage: actualLanguageCode ? LANGUAGE_MAP[actualLanguageCode] : undefined,
     availableLanguages: availableLanguages.length > 1 ? availableLanguages : undefined,
   }
   return post
@@ -286,50 +311,10 @@ export function getPostBySlug(slug: string): Post | null {
 export function getAllPosts(): PostMeta[] {
   const slugs = getPostSlugs()
   const posts = slugs
-    .map((slug) => getPostBySlug(slug))
+    .map((slug) => getPostBySlug(slug)) // This will get the default/first available language
     .filter((p): p is Post => Boolean(p))
 
-  // Group posts by base name to avoid duplicates for multi-language posts
-  const postGroups = new Map<string, Post[]>()
-  
-  for (const post of posts) {
-    const baseName = post.baseName || post.slug
-    if (!postGroups.has(baseName)) {
-      postGroups.set(baseName, [])
-    }
-    postGroups.get(baseName)!.push(post)
-  }
-
-  // For each group, select the preferred post with priority: English > Vietnamese > Others
-  const uniquePosts = Array.from(postGroups.values()).map(groupPosts => {
-    if (groupPosts.length === 1) {
-      return groupPosts[0]
-    }
-    
-    // Priority 1: English version
-    const englishPost = groupPosts.find(p => 
-      p.detectedLanguage === 'English' || 
-      p.slug.toLowerCase().endsWith('-en')
-    )
-    if (englishPost) {
-      return englishPost
-    }
-    
-    // Priority 2: Vietnamese version
-    const vietnamesePost = groupPosts.find(p => 
-      p.detectedLanguage === 'Vietnamese' || 
-      p.slug.toLowerCase().endsWith('-vi') ||
-      p.slug.toLowerCase().endsWith('-vn')
-    )
-    if (vietnamesePost) {
-      return vietnamesePost
-    }
-    
-    // Priority 3: Other languages (alphabetically by slug)
-    return groupPosts.sort((a, b) => a.slug.localeCompare(b.slug))[0]
-  })
-
-  return uniquePosts
+  return posts
     .map((p) => ({
       slug: p.slug,
       title: p.title,

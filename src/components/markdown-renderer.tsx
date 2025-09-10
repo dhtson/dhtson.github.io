@@ -780,7 +780,7 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
                   alt={alt || ""} 
                   width={imageWidth} 
                   height={imageHeight} 
-                  className="rounded-lg" 
+                  className="" 
                   style={{ ...imageStyle, display: 'inline-block' }}
                 />
                 {showImageCaptions && alt && (
