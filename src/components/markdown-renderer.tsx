@@ -112,11 +112,14 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
   }
 
   const highlightPython = (code: string): React.ReactNode => {
-    const keywords = /\b(def|class|if|elif|else|for|while|try|except|finally|with|as|import|from|return|yield|pass|break|continue|and|or|not|in|is|lambda|async|await|global|nonlocal|assert|del|raise|True|False|None)\b/g
-    const strings = /(["'])((?:(?!\1)[^\\]|\\.)*)(\1)/g
+  // Support triple quoted, raw, f-strings and multi-line strings
+  const keywords = /\b(def|class|if|elif|else|for|while|try|except|finally|with|as|import|from|return|yield|pass|break|continue|and|or|not|in|is|lambda|async|await|global|nonlocal|assert|del|raise|True|False|None)\b/g
+  // Matches (optional) string prefixes like r, u, f, fr, rf, b, etc., plus triple or single quoted strings
+  const strings = /(?:(?:[rRuUbBfF]{1,3})?)((?:"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'))/g
     const comments = /#.*$/gm
     const numbers = /\b\d+\.?\d*\b/g
-    const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g
+  // Highlight any identifier followed by '(' (functions + methods)
+  const functions = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\s*\()/g
     const decorators = /@[a-zA-Z_][a-zA-Z0-9_]*/g
     
     return tokenizeCode(code, [
@@ -677,7 +680,7 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
         >
           {copied ? 'Copied' : 'Copy'}
         </button>
-        <pre {...rest} ref={preRef} className={"rounded-xl p-6 pt-12 border border-border shadow-lg overflow-x-auto bg-transparent" + (className ? ` ${className}` : '')}>
+  <pre {...rest} ref={preRef} className={"not-prose rounded-xl p-6 pt-12 border border-border shadow-lg overflow-x-auto bg-transparent" + (className ? ` ${className}` : '')}>
           {children}
         </pre>
       </div>

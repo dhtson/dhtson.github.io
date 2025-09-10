@@ -35,7 +35,7 @@ Okay thì đây là các yếu tố mình tìm ra được:
 - **Chuẩn Hóa Email (Email Normalization):** web sử dụng thư viện `normalize-email` để chuẩn hóa địa chỉ email người dùng cung cấp. Ví dụ he, một email như `user.name+alias@gmail.com` sẽ được chuẩn hóa thành `username@gmail.com`. Email này được dùng làm định danh duy nhất cho người dùng trong cơ sở dữ liệu.
 - **Logic Tạo Mật Khẩu:** Khi register, một mật khẩu tạm thời được tạo ra bằng cách nối **email gốc (chưa chuẩn hóa)** do người dùng nhập vào với một chuỗi ngẫu nhiên dài 32 ký tự hexa. Mật khẩu này sau đó được băm (hash) bằng `bcrypt` và lưu vào cơ sở dữ liệu. Source ở chỗ sao mình biết thì bên dưới đây:
 
-```jsx
+```js
 const initialPassword = req.body.email + crypto.randomBytes(16).toString('hex')
 ```
 

@@ -4,12 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Github, Linkedin, Mail } from "@/components/icons"
 import { useState, useEffect } from "react"
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface BlogHeaderProps {
-  // No props needed anymore
-}
-
-export function BlogHeader({}: BlogHeaderProps) {
+export function BlogHeader() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -21,10 +16,6 @@ export function BlogHeader({}: BlogHeaderProps) {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
-  // const scrollToTop = () => {
-  //   window.scrollTo({ top: 0, behavior: "smooth" })
-  // }
 
   const scrollToBlogs = () => {
     // Navigate to blogs page

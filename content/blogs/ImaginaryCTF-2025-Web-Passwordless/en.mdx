@@ -35,7 +35,7 @@ Okay, so here are the key factors I discovered:
 - **Email Normalization:** The web application uses the `normalize-email` library to normalize the email address provided by the user. For example, an email like `user.name+alias@gmail.com` will be normalized to `username@gmail.com`. This normalized email is used as the unique identifier for the user in the database.
 - **Password Creation Logic:** During registration, a temporary password is created by concatenating the **original (unnormalized) email** entered by the user with a random 32-character hexadecimal string. This password is then hashed using `bcrypt` and saved to the database. The source code that reveals this is:
 
-```jsx
+```js
 const initialPassword = req.body.email + crypto.randomBytes(16).toString('hex')
 ```
 
