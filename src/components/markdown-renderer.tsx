@@ -5,7 +5,6 @@ import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
 import Image from "next/image"
-// No syntax highlighting; render plain code blocks for reliability.
 
 type Props = {
   content: string
@@ -167,15 +166,134 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
   }
 
   const highlightHTML = (code: string): React.ReactNode => {
-    const tags = /<\/?[a-zA-Z][a-zA-Z0-9]*[^>]*>/g
-    const attributes = /\s([a-zA-Z-]+)=("[^"]*"|'[^']*')/g
-    const comments = /<!--[\s\S]*?-->/g
-    
-    return tokenizeCode(code, [
-      { pattern: comments, className: 'text-[#6A9955]' }, // VS Code comment green
-      { pattern: tags, className: 'text-[#569CD6]' }, // VS Code tag blue
-      { pattern: attributes, className: 'text-[#92C5F8]' }, // VS Code attribute light blue
-    ])
+    // Enhanced HTML highlighter: supports attributes, entities, comments, doctype, and embedded JS/CSS
+    const result: React.ReactNode[] = []
+    const entityRegex = /&(?:[a-zA-Z][a-zA-Z0-9]+|#[0-9]+|#x[0-9a-fA-F]+);/g
+
+    const pushPlain = (text: string, key: string) => {
+      if (!text) return
+      // Within plain text, highlight entities
+      let idx = 0
+      let m: RegExpExecArray | null
+      const nodes: React.ReactNode[] = []
+      while ((m = entityRegex.exec(text)) !== null) {
+        if (m.index > idx) {
+          nodes.push(<span key={`${key}-t-${idx}`} style={{ color: '#D4D4D4' }}>{text.slice(idx, m.index)}</span>)
+        }
+        nodes.push(<span key={`${key}-e-${m.index}`} className="text-[#C586C0]">{m[0]}</span>)
+        idx = m.index + m[0].length
+      }
+      if (idx < text.length) {
+        nodes.push(<span key={`${key}-tail`} style={{ color: '#D4D4D4' }}>{text.slice(idx)}</span>)
+      }
+      result.push(<React.Fragment key={key}>{nodes}</React.Fragment>)
+    }
+
+    // Function to render a single tag token (without embedded content)
+    const renderTag = (full: string, tagName: string, attrPart: string, key: string, isClosing: boolean) => {
+      const pieces: React.ReactNode[] = []
+      const selfClosing = /\/>$/.test(full.trim())
+      pieces.push(<span key="lb" style={{ color: '#808080' }}>{isClosing ? '</' : '<'}</span>)
+      pieces.push(<span key="tag" className="text-[#569CD6]">{tagName}</span>)
+      if (!isClosing && attrPart.trim()) {
+        const attrRegex = /([a-zA-Z_:][\w:.-]*)(\s*=\s*("[^"]*"|'[^']*'|[^\s"'<>`]+))?/g
+        let attrMatch: RegExpExecArray | null
+        while ((attrMatch = attrRegex.exec(attrPart)) !== null) {
+          const [, attrName, valuePart] = attrMatch
+          if (!attrMatch[0].trim()) continue
+          const leadingWs = attrMatch[0].match(/^\s*/)?.[0] || ''
+          if (leadingWs) pieces.push(<span key={`ws-${attrMatch.index}`} style={{ whiteSpace: 'pre' }}>{leadingWs}</span>)
+          pieces.push(<span key={`an-${attrMatch.index}`} className="text-[#9CDCFE]">{attrName}</span>)
+          if (valuePart) {
+            const eqIdx = valuePart.indexOf('=')
+            if (eqIdx !== -1) {
+              pieces.push(<span key={`eq-${attrMatch.index}`} style={{ color: '#D4D4D4' }}>=</span>)
+              const rawVal = valuePart.slice(eqIdx + 1).trim()
+              pieces.push(<span key={`val-${attrMatch.index}`} className="text-[#CE9178]">{rawVal}</span>)
+            }
+          }
+        }
+      }
+      if (selfClosing && !isClosing) pieces.push(<span key="sc" style={{ color: '#808080' }}>/</span>)
+      pieces.push(<span key="rb" style={{ color: '#808080' }}>{'>'}</span>)
+      return <span key={key}>{pieces}</span>
+    }
+
+    // Composite regex to find next special token
+    const masterRegex = /<!--[\s\S]*?-->|<!DOCTYPE [^>]+>|<\/?[a-zA-Z][\w:-]*[^>]*>/ig
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+
+    while ((match = masterRegex.exec(code)) !== null) {
+      if (match.index > lastIndex) {
+        pushPlain(code.slice(lastIndex, match.index), `plain-${lastIndex}`)
+      }
+      const token = match[0]
+
+      // Comment
+      if (/^<!--/.test(token)) {
+        result.push(<span key={`c-${match.index}`} className="text-[#6A9955]">{token}</span>)
+      }
+      // Doctype
+      else if (/^<!DOCTYPE/i.test(token)) {
+        result.push(<span key={`d-${match.index}`} className="text-[#C586C0] uppercase">{token}</span>)
+      }
+      // Tag
+      else if (/^</.test(token)) {
+        const tagNameMatch = /^<\/?([a-zA-Z][\w:-]*)/.exec(token)
+        const tagName = tagNameMatch ? tagNameMatch[1] : ''
+        const isClosing = /^<\//.test(token)
+
+        // Embedded script/style handling (only for opening, non-selfclosing tags)
+        if (!isClosing && /^(script|style)$/i.test(tagName)) {
+          // Render opening tag first
+          const attrPart = token.replace(/^<\/?[a-zA-Z][\w:-]*/, '').replace(/>$/,'')
+          result.push(renderTag(token, tagName, attrPart, `tag-${match.index}`, false))
+          // Find closing tag
+            // Find the matching closing tag (case-insensitive)
+            const closeRegex = new RegExp(`</${tagName}\\s*>`, 'i')
+            closeRegex.lastIndex = masterRegex.lastIndex
+            const rest = code.slice(masterRegex.lastIndex)
+            const closeMatch = closeRegex.exec(rest)
+            if (closeMatch) {
+              const innerStart = masterRegex.lastIndex
+              const innerEnd = innerStart + closeMatch.index
+              const innerContent = code.slice(innerStart, innerEnd)
+              // Highlight embedded content
+              let highlighted: React.ReactNode
+              if (/^script$/i.test(tagName)) {
+                highlighted = <span key={`emb-js-${innerStart}`} style={{ display: 'inline' }}>{highlightJavaScript(innerContent)}</span>
+              } else {
+                highlighted = <span key={`emb-css-${innerStart}`} style={{ display: 'inline' }}>{highlightCSS(innerContent)}</span>
+              }
+              result.push(<span key={`emb-${innerStart}`}>{highlighted}</span>)
+              // Render closing tag
+              const closingTag = closeMatch[0]
+              const closingIndex = innerEnd + closingTag.length
+              result.push(renderTag(closingTag, tagName, '', `close-${innerEnd}`, true))
+              // Advance masterRegex to after closing tag
+              masterRegex.lastIndex = closingIndex
+              lastIndex = closingIndex
+              continue
+            } else {
+              // No closing tag found; treat rest as plain
+              lastIndex = masterRegex.lastIndex
+              continue
+            }
+        } else {
+          // Normal tag
+          const tagBody = /^<\/?[a-zA-Z][\w:-]*/.exec(token)?.[0] || ''
+          const attrPart = token.slice(tagBody.length, token.endsWith('>') ? token.length - 1 : token.length)
+          result.push(renderTag(token, tagName, attrPart, `tag-${match.index}`, isClosing))
+        }
+      }
+      lastIndex = masterRegex.lastIndex
+    }
+
+    if (lastIndex < code.length) {
+      pushPlain(code.slice(lastIndex), `plain-${lastIndex}`)
+    }
+    return <>{result}</>
   }
 
   const highlightCSS = (code: string): React.ReactNode => {

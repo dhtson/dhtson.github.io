@@ -105,6 +105,9 @@
   /* Enhanced markdown content styles */
   .prose {
   @apply max-w-none text-foreground leading-relaxed;
+  /* Global word breaking for long strings to prevent mobile overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   }
   
   /* Allow HTML divs to override alignment */
@@ -182,15 +185,27 @@
 
   /* End of KaTeX isolation */
 
-  /* Inline code: no grey background */
+  /* Inline code: no grey background + word breaking for long strings */
   .prose :not(pre) > code {
     @apply px-1 rounded-md text-sm font-mono text-primary;
     background: transparent;
     border: 0;
+    /* Enable word breaking for long strings like API tokens */
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    /* Allow hyphenation for better mobile experience */
+    hyphens: auto;
+    /* Ensure proper line height for wrapped text */
+    line-height: 1.5;
   }
 
   .prose pre code {
     @apply bg-transparent p-0 border-0;
+    /* For code blocks, allow horizontal scrolling on mobile */
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 
   .prose blockquote {
@@ -212,6 +227,9 @@
 
   .prose li {
     @apply text-foreground leading-relaxed;
+    /* Handle long strings in list items (like URLs, tokens) */
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   .prose ul ul, .prose ol ol, .prose ul ol, .prose ol ul {
