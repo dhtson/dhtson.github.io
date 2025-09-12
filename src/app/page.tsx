@@ -3,7 +3,7 @@ import { getAllPosts } from "@/lib/blog"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Home",
+  title: "Harshfeudal Personal Porfolio",
   description: "Welcome to Harshfeudal's personal blog. Discover insights on cybersecurity, CTF writeups, machine learning challenges, and the journey of a Computer Science student at Vietnamese German University.",
   openGraph: {
     title: "Harshfeudal - Personal Blog",
