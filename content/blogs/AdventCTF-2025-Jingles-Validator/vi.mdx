@@ -1,0 +1,202 @@
+---
+title: "Rev / Jingle's Validator - Advent of CTF 2025"
+excerpt: "A writeup on the Rev / Jingle's Validator challenge from Advent of CTF 2025"
+category:
+  - "Writeups"
+tags:
+  - "reverse-engineering"
+  - "vm"
+  - "license-checker"
+  - "2026"
+authors:
+    - "harshfeudal"
+---
+
+## Đề bài
+
+The North Pole Licensing Division needed offline activation for internal tools. Jingle McSnark volunteered to build the validator.
+
+Three weeks later, he emailed the entire department. Called it "military-grade." Refused code review. Attached the binary and said it was uncrackable.
+
+Snowdrift replied-all: "Let me know when you want a second opinion."
+
+Jingle hasn't responded. Attached is an internal test build. Prove him wrong... again.
+
+---
+
+## Hướng giải
+
+### 1. Khảo sát ban đầu (Recon)
+
+Chạy thử chương trình:
+
+```bash
+chmod +x jollyvm
+./jollyvm
+```
+
+Từ hành vi chương trình, ta thu được các thông tin quan trọng:
+
+- License phải có **độ dài đúng 52 ký tự (0x34)**  
+- Nếu sai: `Invalid license key`  
+- Nếu đúng: `License valid` và flag chính là license key
+
+Điều này cho thấy bài toán không phải brute-force chuỗi ký tự, mà là **reverse logic kiểm tra license**.
+
+---
+
+### 2. Tiếp cận binary bị strip: strings & `.rodata`
+
+Binary không có symbol, vì vậy cách nhanh nhất để tiếp cận là thông qua các chuỗi hằng:
+
+```bash
+strings -a jollyvm
+```
+
+Các chuỗi đáng chú ý:
+
+- `Enter license key`
+- `Invalid license key`
+- `License valid`
+
+Tiếp theo, dump section `.rodata`:
+
+```bash
+objdump -s -j .rodata jollyvm
+```
+
+Trong `.rodata` có thể quan sát được ba cấu trúc bất thường:
+
+1. Một bảng giá trị dạng offset → nghi ngờ là **jump table**  
+2. Một blob có kích thước **đúng 52 byte**  
+3. Một dãy byte dài trông giống code nhưng không phải x86
+
+Đây là dấu hiệu rất rõ ràng cho thấy chương trình sử dụng **máy ảo tự chế (custom VM)** để kiểm tra license.
+
+---
+
+### 3. Xác nhận custom VM & format instruction
+
+Trong `.text`, vòng lặp xử lý chính có đoạn tính toán địa chỉ dạng:
+
+```asm
+lea rax, [rdx + rdx*2]   ; ip * 3
+lea rax, [r9 + rax*2]    ; program + ip * 6
+```
+
+Từ đây có thể kết luận:
+
+- Mỗi instruction của VM dài **6 byte**
+- Format instruction:
+
+```
+u8 opcode
+u8 a
+u8 b
+u8 padding
+u16 imm (little-endian)
+```
+
+Opcode được dispatch thông qua jump table nằm trong `.rodata`.
+
+---
+
+### 4. Reverse tập lệnh VM (ISA)
+
+Bằng cách lần theo jump table và phân tích từng handler, có thể gán ý nghĩa cho các opcode của VM. VM hỗ trợ:
+
+- Load immediate, copy thanh ghi
+- Các phép toán số học và bitwise
+- Đọc byte từ input license
+- Ghi byte vào buffer `mem[]`
+- Nhảy có điều kiện / không điều kiện
+
+VM sử dụng ba vùng dữ liệu chính:
+
+- `regs[]`: mảng thanh ghi 32-bit  
+- `mem[]`: buffer dùng để so sánh cuối cùng  
+- `input[]`: license người dùng nhập
+
+Sau bước này, ta đã có thể **emulate VM** hoặc **đọc logic ở mức thuật toán**.
+
+---
+
+### 5. Phân tích bytecode VM
+
+Bytecode của VM nằm hoàn toàn trong `.rodata`.  
+VM thực thi **156 instruction**, sau đó dừng và tiến hành so sánh:
+
+```c
+for i in range(52):
+    if mem[i] != const[i]:
+        fail
+success
+```
+
+Trong đó `const[i]` chính là blob 52 byte được lưu sẵn.
+
+Khi quan sát luồng xử lý bytecode, ta thấy:
+
+- Input 52 byte được xử lý theo **13 block**, mỗi block **4 byte**
+- Mỗi byte đầu ra được tạo bằng phép XOR giữa plaintext và keystream
+
+Điều này cho thấy VM thực chất đang triển khai một **stream cipher**.
+
+---
+
+### 6. Thuật toán phía sau VM
+
+VM sử dụng một hàm feedback:
+
+```
+f(x) = ((x >> 3) ^ (x >> 5) ^ (x >> 8) ^ (x >> 12)) & 0xff
+```
+
+State ban đầu được seed bằng **4 byte cuối của plaintext**:
+
+```
+state = (0xF337 << 8) | f(last_plain_word)
+```
+
+Sau đó, với mỗi block 4 byte:
+
+1. Cập nhật state bằng `f(state)`  
+2. Dùng state làm keystream  
+3. XOR keystream với plaintext → ciphertext  
+4. Cập nhật state bằng `f(plain_word)`
+
+Do `f(last_plain_word)` chỉ tạo ra **8 bit**, seed ban đầu có thể brute-force dễ dàng.
+
+---
+
+### 7. Chiến lược giải
+
+Quy trình giải bài toán:
+
+1. Trích xuất blob ciphertext 52 byte từ `.rodata`  
+2. Brute-force seed từ `0..255`  
+3. Với mỗi seed:
+   - Giải mã toàn bộ 52 byte
+   - Kiểm tra điều kiện tự nhất quán: `seed == f(last_plain_word)`
+   - Lọc kết quả printable và bắt đầu bằng `csd{`
+
+Seed hợp lệ chỉ có **một**, dẫn đến license duy nhất.
+
+---
+
+### 8. Kết quả
+
+License key / Flag thu được:
+
+```
+csd{I5_4ny7HiN9_R34LlY_R4Nd0m_1F_it5_bru73F0rc4B1e?}
+```
+
+---
+
+## Lời kết
+
+Bài toán này yêu cầu người giải nhận diện đúng mô hình **custom VM**, hiểu cách dispatch opcode, sau đó rút gọn toàn bộ bytecode về một thuật toán mã hóa đơn giản.
+
+Việc tập trung vào cấu trúc dữ liệu trong `.rodata`, jump table và vòng lặp xử lý VM là chìa khóa để phá vỡ lớp che giấu mà tác giả cố tình tạo ra.
+
