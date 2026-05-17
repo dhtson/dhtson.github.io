@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from "react"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
@@ -10,6 +11,44 @@ type Props = {
   content: string
   baseImagePath?: string // e.g. `/blogs/my-post`
   showImageCaptions?: boolean
+}
+
+type HastPosition = {
+  start?: { line?: number }
+  end?: { line?: number }
+}
+
+type CodeProps = React.ComponentPropsWithoutRef<"code"> & {
+  node?: {
+    position?: HastPosition
+  }
+}
+
+const parseInlineStyle = (style?: React.CSSProperties | string): React.CSSProperties => {
+  if (!style) return {}
+  if (typeof style !== "string") return style
+
+  const styleObj: Record<string, string> = {}
+
+  style.split(";").forEach((rule) => {
+    const colonIndex = rule.indexOf(":")
+    if (colonIndex === -1) return
+
+    const prop = rule.slice(0, colonIndex).trim()
+    const value = rule.slice(colonIndex + 1).trim()
+
+    if (prop && value) {
+      const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+      styleObj[camelProp] = value
+    }
+  })
+
+  return styleObj as React.CSSProperties
+}
+
+const getLanguageFromClassName = (className?: string): string => {
+  const match = /(?:^|\s)language-([^\s]+)/.exec(className || "")
+  return match ? match[1] : ""
 }
 
 export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, showImageCaptions = false }) => {
@@ -808,7 +847,7 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
   return (
     <div className="prose prose-invert max-w-none">
       <ReactMarkdown
-        remarkPlugins={[remarkMath]}
+        remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[[rehypeKatex, { strict: "ignore", throwOnError: false }], rehypeRaw]}
         components={{
           div: (props) => {
@@ -817,24 +856,8 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
               children?: React.ReactNode;
               [key: string]: unknown;
             }
-            
-            // Parse style if it's a string
-            let divStyle: React.CSSProperties = {}
-            if (style) {
-              if (typeof style === 'string') {
-                const styleObj: Record<string, string> = {}
-                style.split(';').forEach(rule => {
-                  const [prop, value] = rule.split(':').map(s => s.trim())
-                  if (prop && value) {
-                    const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
-                    styleObj[camelProp] = value
-                  }
-                })
-                divStyle = styleObj as React.CSSProperties
-              } else {
-                divStyle = style
-              }
-            }
+
+            const divStyle = parseInlineStyle(style)
             
             return <div {...restProps} style={divStyle}>{children}</div>
           },
@@ -872,23 +895,7 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
             let imageStyle: React.CSSProperties = {}
             let imageWidth = 1200
             let imageHeight = 630
-            
-            if (style) {
-              if (typeof style === 'string') {
-                // Parse inline style string
-                const styleObj: Record<string, string> = {}
-                style.split(';').forEach(rule => {
-                  const [prop, value] = rule.split(':').map(s => s.trim())
-                  if (prop && value) {
-                    const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
-                    styleObj[camelProp] = value
-                  }
-                })
-                imageStyle = styleObj as React.CSSProperties
-              } else {
-                imageStyle = style
-              }
-            }
+            imageStyle = parseInlineStyle(style)
 
             // Handle explicit width/height props
             if (width) imageWidth = typeof width === 'string' ? parseInt(width) || 1200 : width
@@ -926,26 +933,29 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
             let language = ''
             if (React.isValidElement(children)) {
               const codeProps = children.props as { className?: string }
-              if (codeProps?.className) {
-                const match = /language-(\w+)/.exec(codeProps.className || '')
-                language = match ? match[1] : ''
-              }
+              language = getLanguageFromClassName(codeProps?.className)
             }
             return <PreBlock {...props} language={language} />
           },
-          code: ({ inline, className, children }: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
-            if (inline) {
-              return <code className="px-1 text-sm font-mono text-primary">{String(children)}</code>;
-            }
-            
+          code: ({ className, children, node, ...props }: CodeProps) => {
             // Extract language from className (e.g., "language-python" -> "python")
-            const match = /language-(\w+)/.exec(className || '')
-            const language = match ? match[1] : ''
-            const codeString = String(children).replace(/\n$/, '')
+            const language = getLanguageFromClassName(className)
+            const rawCode = String(children)
+            const codeString = rawCode.replace(/\n$/, '')
+            const isMultilineNode = node?.position?.start?.line !== node?.position?.end?.line
+            const isBlock = Boolean(language || rawCode.includes("\n") || isMultilineNode)
+
+            if (!isBlock) {
+              return (
+                <code {...props} className="px-1 font-mono not-italic text-primary">
+                  {children}
+                </code>
+              )
+            }
             
             if (language) {
               return (
-                <code className={`${className} text-sm font-medium`} style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                <code {...props} className={`${className} text-sm font-medium`} style={{ fontSize: '0.9rem', fontWeight: '500' }}>
                   {highlightCode(codeString, language)}
                 </code>
               )
@@ -953,7 +963,7 @@ export const MarkdownRenderer: React.FC<Props> = ({ content, baseImagePath, show
             
             // For block code without language, render normally
             return (
-              <code className={`${className} text-sm font-medium`} style={{ fontSize: '0.9rem', color: '#D4D4D4', fontWeight: '500' }}>
+              <code {...props} className={`${className || ''} text-sm font-medium`} style={{ fontSize: '0.9rem', color: '#D4D4D4', fontWeight: '500' }}>
                 {children}
               </code>
             );

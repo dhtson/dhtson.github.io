@@ -187,17 +187,31 @@
 
   /* Inline code: no grey background + word breaking for long strings */
   .prose :not(pre) > code {
-    @apply px-1 rounded-md text-sm font-mono text-primary;
+    @apply px-1 rounded-md font-mono text-primary;
     background: transparent;
     border: 0;
+    font-size: 0.9em;
+    font-style: normal;
+    font-variant-ligatures: none;
     /* Enable word breaking for long strings like API tokens */
-    word-break: break-all;
+    word-break: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
     /* Allow hyphenation for better mobile experience */
-    hyphens: auto;
+    hyphens: none;
     /* Ensure proper line height for wrapped text */
     line-height: 1.5;
+  }
+
+  .prose h1 code,
+  .prose h2 code,
+  .prose h3 code,
+  .prose h4 code,
+  .prose h5 code,
+  .prose h6 code {
+    font-size: 0.95em;
+    line-height: inherit;
+    hyphens: none;
   }
 
   .prose pre code {
