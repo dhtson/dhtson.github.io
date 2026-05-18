@@ -1,0 +1,298 @@
+---
+title: "Rev / Rotated - TJCTF 2026"
+excerpt: "Writeup tiếng Việt cho bài Rev / Rotated của TJCTF 2026"
+category:
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Rev"
+  - "ELF"
+  - "Bash"
+  - "Base64"
+  - "Gzip"
+  - "Byte Rotation"
+  - "TJCTF"
+  - "2026"
+authors:
+    - "harshfeudal"
+---
+
+## Đề bài
+
+*rotated*
+
+*Description*
+
+*this file isn't making any sense to me. can you discover what it means?*
+
+*Hint 1: look at the title*  
+*Hint 2: consider each byte separately*
+
+Attachment chỉ có một file tên `chall`. Khi chạy `file chall`, file không được nhận diện là ELF, PNG, ZIP hay text bình thường:
+
+```text
+chall: data
+```
+
+Vậy mục tiêu là tìm xem file này đã bị biến đổi như thế nào, khôi phục nội dung thật của nó, rồi tiếp tục reverse để lấy flag.
+
+## Hướng giải
+
+Hai hint đều khá quan trọng:
+
+- `rotated`: dữ liệu đã bị “xoay” hoặc dịch đi theo một cách nào đó;
+- `consider each byte separately`: phép biến đổi được áp dụng độc lập trên từng byte.
+
+Ban đầu mình thử nghĩ theo hướng bit rotation, ví dụ rotate-left hoặc rotate-right từng byte. Tuy nhiên khi nhìn vài byte đầu của file, pattern lại giống một phép cộng/trừ modulo 256 hơn.
+
+Một file executable Linux thường bắt đầu bằng ELF magic:
+
+```text
+7f 45 4c 46
+```
+
+Trong khi 4 byte đầu của `chall` là:
+
+```text
+9c 62 69 63
+```
+
+Nếu lấy từng byte của `chall` trừ đi `0x1d`, ta có:
+
+```text
+9c - 1d = 7f
+62 - 1d = 45
+69 - 1d = 4c
+63 - 1d = 46
+```
+
+Tức là ta khôi phục được đúng ELF magic:
+
+```text
+7f 45 4c 46
+```
+
+Vậy file gốc đã bị encode bằng công thức:
+
+```text
+encoded_byte = (plain_byte + 0x1d) mod 256
+```
+
+Muốn decode thì chỉ cần làm ngược lại:
+
+```text
+plain_byte = (encoded_byte - 0x1d) mod 256
+```
+
+Script decode đơn giản:
+
+```python
+from pathlib import Path
+
+raw = Path("chall").read_bytes()
+decoded = bytes((b - 0x1d) & 0xff for b in raw)
+Path("chall.dec").write_bytes(decoded)
+```
+
+Sau khi decode:
+
+```bash
+file chall.dec
+```
+
+Kết quả:
+
+```text
+chall.dec: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), statically linked, no section header
+```
+
+File đã trở thành một ELF hợp lệ.
+
+### Tầng 2: ELF drop ra một Bash script
+
+Sau khi cấp quyền execute và chạy ELF đã decode:
+
+```bash
+chmod +x chall.dec
+./chall.dec
+```
+
+Nó tạo ra một file mới tên `script.sh` trong thư mục hiện tại.
+
+Nội dung `script.sh` bị obfuscate khá mạnh bằng Bash parameter expansion. Thay vì đọc thủ công cả dòng obfuscated rất dài, cách nhanh nhất là chạy script với trace mode:
+
+```bash
+bash -x script.sh
+```
+
+Trace cho thấy lệnh thật mà script thực thi:
+
+```bash
+++ printf H4sIAEDAzmkC/0tNzshXUPLJz8/OzEtXSMsvUkhUSMtJTLdXUlBWSHEvyEpxjzKPzAo0THSzzPY18jL0y7Es8XMJNfY19rJ0Tre1BQCGqZA9QQAAAA==
+++ base64 -d
+++ gunzip -c
++ eval 'echo "Looking for a flag?" # dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg=='
+```
+
+Tức là `script.sh` thực chất làm ba việc:
+
+```bash
+printf '<gzip-base64-blob>' | base64 -d | gunzip -c
+```
+
+rồi `eval` kết quả sau khi giải nén.
+
+Blob sau khi base64 decode và gzip decompress cho ra:
+
+```bash
+echo "Looking for a flag?" # dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg==
+```
+
+Khi chạy bình thường, Bash chỉ execute phần trước dấu `#`, nên ta chỉ thấy:
+
+```text
+Looking for a flag?
+```
+
+Nhưng flag thật được giấu trong comment dưới dạng base64:
+
+```text
+dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg==
+```
+
+Decode tiếp:
+
+```bash
+echo dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg== | base64 -d
+```
+
+Ta nhận được flag:
+
+```text
+tjctf{b45h_d3bu6_m4573r}
+```
+
+## Final Exploit
+
+Script dưới đây tự động làm toàn bộ quá trình:
+
+1. đọc file `chall`;
+2. trừ `0x1d` trên từng byte để khôi phục ELF;
+3. chạy ELF trong thư mục tạm để lấy `script.sh`;
+4. lấy gzip+base64 blob trong script;
+5. giải nén payload;
+6. decode base64 trong comment để in flag.
+
+```python
+#!/usr/bin/env python3
+import base64
+import gzip
+import re
+import subprocess
+import tempfile
+from pathlib import Path
+
+
+def main():
+    raw = Path("chall").read_bytes()
+
+    # Hint: "rotated" + "consider each byte separately".
+    # The first four encoded bytes are 9c 62 69 63.
+    # Subtracting 0x1d gives 7f 45 4c 46, the ELF magic.
+    decoded = bytes((b - 0x1d) & 0xff for b in raw)
+
+    if decoded[:4] != b"\x7fELF":
+        raise SystemExit("[-] Decoding failed: ELF magic not found")
+
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        exe = td / "chall.dec"
+        exe.write_bytes(decoded)
+        exe.chmod(0o755)
+
+        # The decoded ELF drops script.sh in the current directory.
+        subprocess.run([str(exe)], cwd=td, check=True, timeout=3)
+
+        script = (td / "script.sh").read_text(errors="replace")
+
+    blob = re.search(r"H4sI[A-Za-z0-9+/=]+", script)
+    if not blob:
+        raise SystemExit("[-] gzip+base64 blob not found")
+
+    payload = gzip.decompress(base64.b64decode(blob.group(0))).decode()
+    print(payload)
+
+    for candidate in re.findall(r"[A-Za-z0-9+/]{12,}={0,2}", payload):
+        try:
+            msg = base64.b64decode(candidate).decode()
+        except Exception:
+            continue
+
+        if "tjctf{" in msg:
+            print(msg.strip())
+            return
+
+    raise SystemExit("[-] Flag not found")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Chạy:
+
+```bash
+python3 run.py
+```
+
+Output:
+
+```text
+echo "Looking for a flag?" # dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg==
+tjctf{b45h_d3bu6_m4573r}
+```
+
+## Vì sao exploit hoạt động?
+
+Bài này có nhiều lớp obfuscation, nhưng mỗi lớp đều khá nhỏ nếu bóc đúng thứ tự.
+
+Flow đầy đủ:
+
+```text
+chall
+  ↓ subtract 0x1d from every byte
+valid ELF binary
+  ↓ execute decoded ELF
+script.sh
+  ↓ deobfuscate Bash pipeline
+base64 decode + gzip decompress
+  ↓ inspect decompressed command
+base64 hidden in Bash comment
+  ↓ base64 decode
+flag
+```
+
+Điểm quan trọng nhất là nhận ra phép biến đổi ban đầu không phải rotate cả file, cũng không phải XOR, mà là một Caesar shift trên từng byte:
+
+```text
+plain_byte = encoded_byte - 0x1d mod 256
+```
+
+Sau đó phần còn lại là unpack từng lớp:
+
+- ELF đã decode drop ra `script.sh`;
+- Bash script dùng obfuscation để che `printf | base64 -d | gunzip -c`;
+- payload giải nén chỉ in một câu đánh lạc hướng;
+- flag thật nằm trong comment, encode bằng base64.
+
+## Lời kết
+
+Đây là một bài rev nhẹ nhưng rất vui vì title và hint đều mô tả đúng hướng giải. Nếu chỉ chạy file ban đầu hoặc nhìn bằng `file`, ta gần như không thấy gì hữu ích. Nhưng chỉ cần so sánh vài byte đầu với magic header quen thuộc của ELF, offset `0x1d` lộ ra ngay.
+
+Điểm mình thích ở bài này là flag không nằm trực tiếp trong ELF. Sau byte-rotation còn có thêm một ELF dropper, một Bash script obfuscated, một lớp base64+gzip, rồi cuối cùng là một base64 trong comment.
+
+```text
+tjctf{b45h_d3bu6_m4573r}
+```
+
+<img src="image.png" alt="image.png" style="width: 30%; height: auto;" />

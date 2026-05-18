@@ -1,0 +1,298 @@
+---
+title: "Rev / Rotated - TJCTF 2026"
+excerpt: "A writeup on the Rev / Rotated challenge from TJCTF 2026"
+category:
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Rev"
+  - "ELF"
+  - "Bash"
+  - "Base64"
+  - "Gzip"
+  - "Byte Rotation"
+  - "TJCTF"
+  - "2026"
+authors:
+    - "harshfeudal"
+---
+
+## The Challenge
+
+*rotated*
+
+*Description*
+
+*this file isn't making any sense to me. can you discover what it means?*
+
+*Hint 1: look at the title*  
+*Hint 2: consider each byte separately*
+
+The attachment only contains one file named `chall`. Running `file chall` does not identify it as an ELF, PNG, ZIP, or regular text file:
+
+```text
+chall: data
+```
+
+So the goal is to figure out how the file was transformed, recover the real content, and continue reversing it until we get the flag.
+
+## The Walkthrough
+
+Both hints are important:
+
+- `rotated`: the data has likely been rotated or shifted somehow;
+- `consider each byte separately`: the transformation is applied independently to each byte.
+
+My first thought was bit rotation, such as rotating each byte left or right. However, after looking at the first few bytes, the pattern looked more like addition/subtraction modulo 256.
+
+A Linux executable normally starts with the ELF magic:
+
+```text
+7f 45 4c 46
+```
+
+The first four bytes of `chall` are:
+
+```text
+9c 62 69 63
+```
+
+If we subtract `0x1d` from each byte, we get:
+
+```text
+9c - 1d = 7f
+62 - 1d = 45
+69 - 1d = 4c
+63 - 1d = 46
+```
+
+That recovers the exact ELF magic:
+
+```text
+7f 45 4c 46
+```
+
+Therefore, the original file was encoded with:
+
+```text
+encoded_byte = (plain_byte + 0x1d) mod 256
+```
+
+To decode it, we simply reverse the operation:
+
+```text
+plain_byte = (encoded_byte - 0x1d) mod 256
+```
+
+A minimal decoder is enough:
+
+```python
+from pathlib import Path
+
+raw = Path("chall").read_bytes()
+decoded = bytes((b - 0x1d) & 0xff for b in raw)
+Path("chall.dec").write_bytes(decoded)
+```
+
+After decoding:
+
+```bash
+file chall.dec
+```
+
+The result is:
+
+```text
+chall.dec: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), statically linked, no section header
+```
+
+The file is now a valid ELF binary.
+
+### Stage 2: the ELF drops a Bash script
+
+After making the decoded ELF executable and running it:
+
+```bash
+chmod +x chall.dec
+./chall.dec
+```
+
+It creates a new file named `script.sh` in the current directory.
+
+The generated `script.sh` is heavily obfuscated with Bash parameter expansion. Instead of manually reading the very long obfuscated line, the fastest method is to run it with trace mode:
+
+```bash
+bash -x script.sh
+```
+
+The trace reveals the real commands:
+
+```bash
+++ printf H4sIAEDAzmkC/0tNzshXUPLJz8/OzEtXSMsvUkhUSMtJTLdXUlBWSHEvyEpxjzKPzAo0THSzzPY18jL0y7Es8XMJNfY19rJ0Tre1BQCGqZA9QQAAAA==
+++ base64 -d
+++ gunzip -c
++ eval 'echo "Looking for a flag?" # dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg=='
+```
+
+So `script.sh` is basically doing:
+
+```bash
+printf '<gzip-base64-blob>' | base64 -d | gunzip -c
+```
+
+and then `eval`ing the decompressed result.
+
+After base64-decoding and gzip-decompressing the blob, we get:
+
+```bash
+echo "Looking for a flag?" # dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg==
+```
+
+When executed normally, Bash only runs the part before the `#`, so we only see:
+
+```text
+Looking for a flag?
+```
+
+However, the real flag is hidden in the comment as another base64 string:
+
+```text
+dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg==
+```
+
+Decoding it:
+
+```bash
+echo dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg== | base64 -d
+```
+
+gives the flag:
+
+```text
+tjctf{b45h_d3bu6_m4573r}
+```
+
+## Final Exploit
+
+The following script automates the full solve:
+
+1. read `chall`;
+2. subtract `0x1d` from every byte to recover the ELF;
+3. run the ELF inside a temporary directory to obtain `script.sh`;
+4. extract the gzip+base64 blob from the script;
+5. decompress the payload;
+6. decode the base64 string hidden in the comment and print the flag.
+
+```python
+#!/usr/bin/env python3
+import base64
+import gzip
+import re
+import subprocess
+import tempfile
+from pathlib import Path
+
+
+def main():
+    raw = Path("chall").read_bytes()
+
+    # Hint: "rotated" + "consider each byte separately".
+    # The first four encoded bytes are 9c 62 69 63.
+    # Subtracting 0x1d gives 7f 45 4c 46, the ELF magic.
+    decoded = bytes((b - 0x1d) & 0xff for b in raw)
+
+    if decoded[:4] != b"\x7fELF":
+        raise SystemExit("[-] Decoding failed: ELF magic not found")
+
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        exe = td / "chall.dec"
+        exe.write_bytes(decoded)
+        exe.chmod(0o755)
+
+        # The decoded ELF drops script.sh in the current directory.
+        subprocess.run([str(exe)], cwd=td, check=True, timeout=3)
+
+        script = (td / "script.sh").read_text(errors="replace")
+
+    blob = re.search(r"H4sI[A-Za-z0-9+/=]+", script)
+    if not blob:
+        raise SystemExit("[-] gzip+base64 blob not found")
+
+    payload = gzip.decompress(base64.b64decode(blob.group(0))).decode()
+    print(payload)
+
+    for candidate in re.findall(r"[A-Za-z0-9+/]{12,}={0,2}", payload):
+        try:
+            msg = base64.b64decode(candidate).decode()
+        except Exception:
+            continue
+
+        if "tjctf{" in msg:
+            print(msg.strip())
+            return
+
+    raise SystemExit("[-] Flag not found")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Run it:
+
+```bash
+python3 run.py
+```
+
+Output:
+
+```text
+echo "Looking for a flag?" # dGpjdGZ7YjQ1aF9kM2J1Nl9tNDU3M3J9Cg==
+tjctf{b45h_d3bu6_m4573r}
+```
+
+## Why This Works
+
+The challenge has several small obfuscation layers, but each layer is easy to peel once we follow the hints in the right order.
+
+The full flow is:
+
+```text
+chall
+  ↓ subtract 0x1d from every byte
+valid ELF binary
+  ↓ execute decoded ELF
+script.sh
+  ↓ deobfuscate Bash pipeline
+base64 decode + gzip decompress
+  ↓ inspect decompressed command
+base64 hidden in Bash comment
+  ↓ base64 decode
+flag
+```
+
+The most important observation is that the initial transformation is not a whole-file rotation, and not XOR. It is a Caesar-style shift over individual bytes:
+
+```text
+plain_byte = encoded_byte - 0x1d mod 256
+```
+
+After that, the remaining work is just unpacking layers:
+
+- the decoded ELF drops `script.sh`;
+- the Bash script hides `printf | base64 -d | gunzip -c` behind parameter-expansion noise;
+- the decompressed payload prints a decoy message;
+- the real flag is in a base64-encoded Bash comment.
+
+## Final Words
+
+This is a light but fun reversing challenge because the title and hints point directly to the correct first step. If we only run `file` on the original attachment, it looks meaningless. But once we compare the first few bytes with a familiar magic header, the `0x1d` offset becomes obvious.
+
+What I liked about the challenge is that the flag is not directly inside the recovered ELF. After the byte rotation, there is still an ELF dropper, an obfuscated Bash script, a base64+gzip layer, and finally a base64 string hidden inside a comment.
+
+```text
+tjctf{b45h_d3bu6_m4573r}
+```
+
+<img src="image.png" alt="image.png" style="width: 30%; height: auto;" />
