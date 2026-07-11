@@ -52,6 +52,7 @@ function isMonthLike(text: string): boolean {
 function isDateLike(text: string): boolean {
   const t = text.trim()
   return (
+    /^(present|current|ongoing)$/i.test(t) ||
     /^\d{1,2}\/\d{4}/.test(t) ||
     /^\d{4}/.test(t) ||
     isMonthLike(t)

@@ -24,6 +24,9 @@ function interpolateResume(content, ctftime) {
     .replaceAll("{{ctftime_overall_place}}", String(ctftime.overallPlace))
     .replaceAll("{{ctftime_points}}", String(ctftime.points))
     .replaceAll("{{ctftime_snapshot}}", snapshot)
+    // A single Markdown newline is a space to Pandoc. Turn standalone bold
+    // date/range lines into hard breaks so the role appears on the next line.
+    .replace(/^(\*\*[^*\n]+\*\*)[ \t]*\r?\n(?=\S)/gm, "$1  \n")
 }
 
 async function main() {
