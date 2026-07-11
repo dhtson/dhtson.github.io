@@ -53,6 +53,19 @@ export default function ResumePage() {
     <div className="bg-background relative overflow-hidden">
       <BlogHeader />
       <main className="container mx-auto px-6 py-12 max-w-4xl relative pt-24">
+        <div className="mb-4 flex justify-end">
+          <a
+            href="/resume.pdf"
+            download="dhtson_CV.pdf"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold rounded-xl hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl text-sm"
+            aria-label="Download resume as PDF"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+            </svg>
+            <span>Download Resume</span>
+          </a>
+        </div>
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent mb-6 text-balance animate-slideInUp">
             Resume

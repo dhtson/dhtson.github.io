@@ -7,6 +7,8 @@
     "dev": "npm run link-images && next dev --turbopack",
     "copy-images": "node scripts/copy-images.js",
     "link-images": "node scripts/link-images.js",
+    "fetch-ctftime": "node scripts/fetch-ctftime.js",
+    "build-resume": "node scripts/build-resume.js",
     "prebuild": "npm run copy-images",
     "build": "next build",
     "export": "next build && next export",

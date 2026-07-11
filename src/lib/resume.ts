@@ -3,6 +3,7 @@ import fs from "fs"
 import path from "path"
 import matter from "gray-matter"
 import { execSync } from "child_process"
+import ctftime from "../../data/ctftime.json"
 
 export type ResumeMeta = {
   name: string
@@ -41,7 +42,15 @@ export function getResume(): Resume | null {
   if (!fs.existsSync(RESUME_FILE)) return null
 
   const raw = fs.readFileSync(RESUME_FILE, "utf8")
-  const { content, data } = matter(raw)
+  const parsed = matter(raw)
+  const data = parsed.data
+  const fetchedAt = new Date(ctftime.fetchedAt)
+  const ctftimeSnapshot = `${String(fetchedAt.getUTCMonth() + 1).padStart(2, "0")}/${fetchedAt.getUTCFullYear()}`
+  const content = parsed.content
+    .replaceAll("{{ctftime_country_place}}", String(ctftime.countryPlace))
+    .replaceAll("{{ctftime_overall_place}}", String(ctftime.overallPlace))
+    .replaceAll("{{ctftime_points}}", String(ctftime.points))
+    .replaceAll("{{ctftime_snapshot}}", ctftimeSnapshot)
 
   // Get file stats and git timestamps for automatic date handling
   const stat = fs.statSync(RESUME_FILE)

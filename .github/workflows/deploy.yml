@@ -4,6 +4,8 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
 
 permissions:
   contents: read
@@ -31,6 +33,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Fetch current CTFTime ranking
+        run: npm run fetch-ctftime
+
+      - name: Install PDF build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc latexmk texlive-xetex texlive-latex-extra texlive-fonts-recommended fonts-lmodern
+
+      - name: Build resume PDF
+        run: npm run build-resume
 
       - name: "Build static export (Next.js output: export)"
         run: npm run build
