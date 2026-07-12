@@ -1,6 +1,7 @@
 import { BlogHeader } from "@/components/blog-header"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { ResumeRenderer } from "@/components/resume-renderer"
+import { ClientDate } from "@/components/client-date"
 import { getResume } from "@/lib/resume"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
@@ -19,27 +20,6 @@ export const metadata: Metadata = {
     title: "Resume - Đặng Hữu Trung Sơn",
     description: "Computer Science Bachelor Student specializing in cybersecurity and machine learning.",
   },
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const month = months[date.getMonth()]
-  const day = date.getDate()
-  const year = date.getFullYear()
-  
-  // Add ordinal suffix (st, nd, rd, th)
-  const getOrdinalSuffix = (day: number): string => {
-    if (day >= 11 && day <= 13) return 'th'
-    switch (day % 10) {
-      case 1: return 'st'
-      case 2: return 'nd'
-      case 3: return 'rd'
-      default: return 'th'
-    }
-  }
-  
-  return `${month} ${day}${getOrdinalSuffix(day)}, ${year}`
 }
 
 export default function ResumePage() {
@@ -89,7 +69,7 @@ export default function ResumePage() {
               </div>
             )}
             <p className="text-sm text-muted-foreground mt-4">
-              Last updated: {formatDate(resume.lastUpdated)}
+              Last updated: <ClientDate dateString={resume.lastUpdated} ordinal />
             </p>
           </div>
 

@@ -21,7 +21,10 @@ const RESUME_FILE = path.join(process.cwd(), "content", "resume.mdx")
 function getGitTimestamps(filePath: string): { created?: string; updated?: string } {
   try {
     // Get ISO-8601 author dates for all commits touching this file (newest first)
-    const out = execSync(`git log --follow --format=%aI -- "${filePath.replace(/"/g, '\\"')}"`, {
+    // Committer time is the timestamp of the actual commit GitHub receives.
+    // Keep the full ISO offset; the browser converts this instant to the
+    // viewer's local timezone when displaying it.
+    const out = execSync(`git log --follow --format=%cI -- "${filePath.replace(/"/g, '\\"')}"`, {
       stdio: ["ignore", "pipe", "ignore"],
       cwd: process.cwd(),
     })

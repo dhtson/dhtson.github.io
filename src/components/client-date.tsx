@@ -5,9 +5,20 @@ import { useState, useEffect } from "react"
 interface ClientDateProps {
   dateString: string
   className?: string
+  ordinal?: boolean
 }
 
-export function ClientDate({ dateString, className }: ClientDateProps) {
+function getOrdinalSuffix(day: number): string {
+  if (day >= 11 && day <= 13) return "th"
+  switch (day % 10) {
+    case 1: return "st"
+    case 2: return "nd"
+    case 3: return "rd"
+    default: return "th"
+  }
+}
+
+export function ClientDate({ dateString, className, ordinal = false }: ClientDateProps) {
   const [formattedDate, setFormattedDate] = useState("")
 
   useEffect(() => {
@@ -21,8 +32,9 @@ export function ClientDate({ dateString, className }: ClientDateProps) {
     const month = months[date.getMonth()]
     const year = date.getFullYear()
     
-    setFormattedDate(`${month} ${day}, ${year}`)
-  }, [dateString])
+    const displayDay = ordinal ? `${day}${getOrdinalSuffix(day)}` : String(day)
+    setFormattedDate(`${month} ${displayDay}, ${year}`)
+  }, [dateString, ordinal])
 
   // Return a placeholder while hydrating to avoid hydration mismatch
   if (!formattedDate) {
