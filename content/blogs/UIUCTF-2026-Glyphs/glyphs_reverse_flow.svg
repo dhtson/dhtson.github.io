@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="470" viewBox="0 0 980 470">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <text x="490" y="30" text-anchor="middle" class="title">High-level solve path</text>
+
+  <rect x="40"  y="80"  width="180" height="70" rx="10" class="box"/>
+  <text x="130" y="106" text-anchor="middle">glyphs</text>
+  <text x="130" y="124" text-anchor="middle">24 MiB stripped PIE</text>
+
+  <rect x="300" y="80"  width="210" height="70" rx="10" class="box"/>
+  <text x="405" y="106" text-anchor="middle">13915 × 13843</text>
+  <text x="405" y="124" text-anchor="middle">packed bitmap</text>
+
+  <rect x="590" y="80"  width="210" height="70" rx="10" class="box"/>
+  <text x="695" y="106" text-anchor="middle">2D glyph VM</text>
+  <text x="695" y="124" text-anchor="middle">8-direction walk</text>
+
+  <rect x="300" y="230" width="210" height="80" rx="10" class="box"/>
+  <text x="405" y="261" text-anchor="middle">lambda terms</text>
+  <text x="405" y="279" text-anchor="middle">24-byte records</text>
+
+  <rect x="590" y="230" width="240" height="80" rx="10" class="box"/>
+  <text x="710" y="261" text-anchor="middle">final predicate</text>
+  <text x="710" y="279" text-anchor="middle">(CHECKER TARGET USER)</text>
+
+  <rect x="365" y="370" width="300" height="65" rx="10" class="box"/>
+  <text x="515" y="402.5" text-anchor="middle">recover TARGET → chunks → flag</text>
+
+  <!-- centered side-center connectors -->
+  <line x1="220" y1="115" x2="300" y2="115" class="line"/>
+  <line x1="510" y1="115" x2="590" y2="115" class="line"/>
+  <polyline points="695,150 695,190 405,190 405,230" class="line"/>
+  <line x1="510" y1="270" x2="590" y2="270" class="line"/>
+  <polyline points="710,310 710,340 515,340 515,370" class="line"/>
+</svg>

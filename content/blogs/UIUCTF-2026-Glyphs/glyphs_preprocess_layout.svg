@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="360" viewBox="0 0 1040 360">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .note { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 4 4; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <text x="520" y="30" text-anchor="middle" class="title">Input preprocessing layout for the recovered length</text>
+  <rect x="40" y="75" width="940" height="58" rx="10" class="box"/>
+  <text x="510" y="104" text-anchor="middle">146-byte input: b0 b1 b2 b3 b4 ... b143 b144 b145</text>
+  <rect x="45" y="195" width="130" height="55" rx="10" class="note"/>
+  <text x="110" y="213.5" text-anchor="middle">b0</text>
+  <text x="110" y="231.5" text-anchor="middle">ignored</text>
+  <rect x="210" y="190" width="420" height="65" rx="10" class="box"/>
+  <text x="420" y="213.5" text-anchor="middle">(b1,b2), (b3,b4), ...</text>
+  <text x="420" y="231.5" text-anchor="middle">72 pair chunks</text>
+  <rect x="700" y="195" width="150" height="55" rx="10" class="box"/>
+  <text x="775" y="213.5" text-anchor="middle">b145</text>
+  <text x="775" y="231.5" text-anchor="middle">singleton</text>
+  <rect x="360" y="295" width="300" height="45" rx="10" class="box"/>
+  <text x="510" y="317.5" text-anchor="middle">normalized USER tree</text>
+  <polyline points="100,133 100,164 110,164 110,195" class="line"/>
+  <polyline points="510,133 510,162 420,162 420,190" class="line"/>
+  <polyline points="940,133 940,164 775,164 775,195" class="line"/>
+  <polyline points="420,255 420,275 475,275 475,295" class="line"/>
+  <polyline points="775,250 775,275 545,275 545,295" class="line"/>
+</svg>

@@ -43,4 +43,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - The **source code** is licensed under the [MIT License](./LICENSE).  
 - The **blog content** (posts, articles, and images) is licensed under [CC BY-NC 4.0](./LICENSE-CONTENT.md).  
 
-© 2025 dhtson (aka harshfeudal) and blog contributors
+© 2026 dhtson (aka harshfeudal)
