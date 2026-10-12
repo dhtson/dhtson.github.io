@@ -1,0 +1,19 @@
+$ echo FLAG | ./checksum | tail -1
+Checksum: 39
+$ echo MANS_BEST_FRIEND | ./checksum | tail -1
+Checksum: 6c
+$ time python3 writeup/solve.py ./checksum
+root 4f4800fb  checksum=0b  decodings=0
+root d596da62  checksum=21  decodings=0
+root 9b9436e0  checksum=6c  decodings=2
+    d3;
+    dog
+root defa60cc  checksum=39  decodings=18
+    FortID{cH3ck5um_1s_n0t_s3cts3}
+    FortID{cH3ck5um_1s_n0t_s3cur3}
+
+real	0m0.856s
+user	0m0.693s
+sys	0m0.182s
+$ python3 -c "from functools import reduce; print(hex(reduce(lambda a,c: a^ord(c), 'FortID{cH3ck5um_1s_n0t_s3cur3}', 0)))"
+0x39
