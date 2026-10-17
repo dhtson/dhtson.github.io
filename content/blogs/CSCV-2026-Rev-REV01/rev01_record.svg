@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="330" viewBox="0 0 1000 330">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .small { font-size: 12px; }
+      .dim { fill: #d0d0d0; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .dash { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .fill { fill: #ffffff; fill-opacity: 0.22; stroke: #ffffff; stroke-width: 1.4; }
+      .hot { fill: #ffffff; fill-opacity: 0.5; stroke: #ffffff; stroke-width: 1.4; }
+      .cell { fill: none; stroke: #ffffff; stroke-width: 1.2; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .plain { fill: none; stroke: #ffffff; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="500" y="30" text-anchor="middle" class="title">What the client reports about its GPU</text>
+  <rect x="60" y="70" width="120" height="90" rx="4" class="box"/>
+  <text x="120" y="102" text-anchor="middle">VEN</text>
+  <text x="120" y="120" text-anchor="middle">u32</text>
+  <text x="120" y="138" text-anchor="middle">0x8086</text>
+  <rect x="180" y="70" width="120" height="90" rx="4" class="box"/>
+  <text x="240" y="102" text-anchor="middle">DEV</text>
+  <text x="240" y="120" text-anchor="middle">u32</text>
+  <text x="240" y="138" text-anchor="middle">0x46A6</text>
+  <rect x="300" y="70" width="150" height="90" rx="4" class="box"/>
+  <text x="375" y="102" text-anchor="middle">IP</text>
+  <text x="375" y="120" text-anchor="middle">u32</text>
+  <text x="375" y="138" text-anchor="middle">0x0300C000</text>
+  <rect x="450" y="70" width="110" height="90" rx="4" class="box"/>
+  <text x="505" y="102" text-anchor="middle">CU</text>
+  <text x="505" y="120" text-anchor="middle">u32</text>
+  <text x="505" y="138" text-anchor="middle">80</text>
+  <rect x="560" y="70" width="70" height="90" rx="4" class="box"/>
+  <text x="595" y="102" text-anchor="middle">len</text>
+  <text x="595" y="120" text-anchor="middle">u8</text>
+  <text x="595" y="138" text-anchor="middle">13</text>
+  <rect x="630" y="70" width="300" height="90" rx="4" class="box"/>
+  <text x="780" y="102" text-anchor="middle">DRV</text>
+  <text x="780" y="120" text-anchor="middle">char[len]</text>
+  <text x="780" y="138" text-anchor="middle">"32.0.101.7088"</text>
+  <text x="64" y="182" text-anchor="start" class="small dim">+0</text>
+  <text x="184" y="182" text-anchor="start" class="small dim">+4</text>
+  <text x="304" y="182" text-anchor="start" class="small dim">+8</text>
+  <text x="454" y="182" text-anchor="start" class="small dim">+12</text>
+  <text x="564" y="182" text-anchor="start" class="small dim">+16</text>
+  <text x="634" y="182" text-anchor="start" class="small dim">+17</text>
+  <text x="500" y="225" text-anchor="middle" class="small">clGetDeviceInfo: VENDOR_ID, DEVICE_ID_INTEL, IP_VERSION_INTEL, MAX_COMPUTE_UNITS, DRIVER_VERSION</text>
+  <text x="500" y="255" text-anchor="middle" class="small">IP 0x0300C000 = 12.3.0 = Alder Lake-P (Intel compute-runtime platforms.h)</text>
+  <text x="500" y="285" text-anchor="middle" class="small">the digest covers every byte, so the whole record has to be right at once</text>
+</svg>

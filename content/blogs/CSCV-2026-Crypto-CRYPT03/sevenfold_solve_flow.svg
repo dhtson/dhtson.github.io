@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="470" viewBox="0 0 980 470">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .small { font-size: 12px; }
+      .dim { fill: #d0d0d0; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .dash { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .fill { fill: #ffffff; fill-opacity: 0.22; stroke: #ffffff; stroke-width: 1.4; }
+      .hot { fill: #ffffff; fill-opacity: 0.5; stroke: #ffffff; stroke-width: 1.4; }
+      .cell { fill: none; stroke: #ffffff; stroke-width: 1.2; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .plain { fill: none; stroke: #ffffff; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="490" y="30" text-anchor="middle" class="title">High-level solve path</text>
+  <rect x="40" y="80" width="200" height="70" rx="10" class="box"/>
+  <text x="140" y="111" text-anchor="middle">AES-128, 6 rounds</text>
+  <text x="140" y="129" text-anchor="middle">CTR-encrypted flag</text>
+  <rect x="320" y="80" width="220" height="70" rx="10" class="box"/>
+  <text x="430" y="111" text-anchor="middle">option 2: 2^32 texts</text>
+  <text x="430" y="129" text-anchor="middle">parity bitmap (512 MiB)</text>
+  <rect x="620" y="80" width="230" height="70" rx="10" class="box"/>
+  <text x="735" y="111" text-anchor="middle">4-round integral</text>
+  <text x="735" y="129" text-anchor="middle">balanced bytes in s4</text>
+  <rect x="320" y="230" width="220" height="80" rx="10" class="box"/>
+  <text x="430" y="266" text-anchor="middle">partial sums on GPU</text>
+  <text x="430" y="284" text-anchor="middle">2^40 guesses / row</text>
+  <rect x="620" y="230" width="230" height="80" rx="10" class="box"/>
+  <text x="735" y="266" text-anchor="middle">k6 diagonals</text>
+  <text x="735" y="284" text-anchor="middle">groups 0, 3, 1</text>
+  <rect x="320" y="370" width="330" height="65" rx="10" class="box"/>
+  <text x="485" y="407.5" text-anchor="middle">key schedule inversion -&gt; flag</text>
+  <line x1="240" y1="115" x2="320" y2="115" class="line"/>
+  <line x1="540" y1="115" x2="620" y2="115" class="line"/>
+  <polyline points="735,150 735,190 430,190 430,230" class="line"/>
+  <line x1="540" y1="270" x2="620" y2="270" class="line"/>
+  <polyline points="735,310 735,340 485,340 485,370" class="line"/>
+</svg>

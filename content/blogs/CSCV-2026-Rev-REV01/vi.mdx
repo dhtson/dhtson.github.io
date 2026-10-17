@@ -1,0 +1,273 @@
+title: "Rev / REV01 - CSCV 2026"
+excerpt: "Writeup tiếng Việt cho thử thách Rev / REV01 của CSCV 2026"
+category:
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Rev"
+  - "PE"
+  - "Obfuscation"
+  - "C2"
+  - "OpenCL"
+  - "SPIR-V"
+  - "Intel GPU"
+  - "Unicorn"
+  - "CSCV"
+  - "2026"
+authors:
+    - "harshfeudal"
+---
+
+## Đề bài
+
+*REV01*
+
+*Mô tả*
+
+*Good luck*
+
+*pass: infected*
+
+Gói nén chỉ có một tệp `chall.exe`; trang challenge có instancer khởi chạy server riêng trong 120 giây. Nhìn từ bên ngoài, đây là chương trình console Windows 64-bit bình thường:
+
+```text
+chall.exe: PE32+ executable for MS Windows 5.02 (console), x86-64 (stripped to external PDB), 10 sections
+```
+
+File nặng 15 MB, gần như toàn bộ nằm trong `.text`. Import table chỉ có vài hàm của KERNEL32 và msvcrt. Không có socket API hay OpenCL, còn `strings` thì chẳng cho ra gì hữu ích. Sau đó tác giả nói challenge của họ có guessing, mẹo anti-disassembly và obfuscation; cả ba đều xuất hiện ở đây.
+
+Flag cuối cùng là:
+
+```text
+CSCV2026{wav3_1ocked_cros5_1aNe_H4NdshaKe}
+```
+
+<img src="rev01_solve_flow.svg" alt="Các bước giải tổng quát cho REV01" style="width: 100%; height: auto;" />
+
+## Quá trình giải
+
+### Nhìn lần đầu: 15 MB đang giấu gì?
+
+Mã được dựng để làm người phân tích mệt mỏi. Hai kỹ thuật chiếm gần như toàn bộ phần gây nhiễu.
+
+Kỹ thuật thứ nhất là **mixed boolean-arithmetic (MBA)**. Các phép toán đơn giản bị viết lại thành chuỗi dài gồm `not`, `and`, `xor` và `add`, thao tác qua các ô trên stack. Đây là phần mở đầu của hàm giao thức chính; toàn bộ đoạn đó tính một giá trị từ địa chỉ của biến cục bộ:
+
+<img src="rev01_mba.png" alt="Chuỗi MBA trong hàm giao thức" style="width: 80%; height: auto;" />
+
+Trong 256 KB đầu tiên của hàm này có khoảng 25.800 lệnh `mov`, 8.500 `and`, 5.000 `not` và 4.400 `xor`, trong khi chỉ có 375 lệnh `cmp`.
+
+Kỹ thuật thứ hai là **control-flow flattening**. Mỗi hàm bị làm rối hoạt động như một state machine. Một state 32-bit nằm tại `[rsp+0x5c]`; dispatcher so sánh nó với các hằng số qua một chuỗi tuyến tính dài, rồi mỗi handler tính state kế tiếp bằng thêm MBA:
+
+<img src="rev01_dispatcher.png" alt="Dispatcher đã bị làm phẳng" style="width: 80%; height: auto;" />
+
+<img src="rev01_flattening.svg" alt="Cấu trúc control-flow flattening" style="width: 100%; height: auto;" />
+
+Các hàm phụ nhỏ được gọi từ handler là opaque predicate. Một hàm nhân `(g ^ v) & ~1` với `(g ^ v) | 1`, tức số chẵn nhân số lẻ, rồi chỉ giữ bit 0; vì thế đối số không thể làm thay đổi kết quả. Decompiler thấy nhánh phụ thuộc dữ liệu, nhưng CPU luôn đi cùng một nhánh.
+
+Ngoài ra còn có:
+
+- Windows API được phân giải bằng hash (`ws2_32.dll`, `OpenCL.dll` và các export của chúng được tra bằng hash 32-bit, không dùng tên).
+- Chuỗi được mã hóa theo công thức `out[i] = in[i] ^ ((37*i - 0x5b) & 0xff)`.
+- Một bảng gồm 40 chuỗi mồi trong `.rdata`: RSA, license key, anti-VM, maze solver, thậm chí `flag=RC4(key,ct)`. Đoạn code duy nhất đụng tới bảng này băm cả 40 chuỗi vào một biến global mà không nơi nào đọc.
+
+<img src="rev01_strings.png" alt="Các chuỗi thật và chuỗi mồi sau khi giải mã" style="width: 100%; height: auto;" />
+
+Về “anti-disassembly”, ta kiểm tra code chạy trong một session để tìm các trò chèn byte rác quen thuộc (`jmp $+3; db 0xe8`, `jz/jnz` nhảy qua opcode giả). Không có trò nào như vậy. Lệnh nhảy tiến duy nhất được thực thi chỉ là output bình thường của compiler. Anti-disassembly thật nằm trong payload, sẽ nói ở phần sau.
+
+Đọc tĩnh toàn bộ đống này không đáng công. Thay vào đó, ta coi chương trình như black box, dùng Unicorn để emulate, rồi chỉ đọc những phần mà kết quả emulation chứng minh là có liên quan.
+
+### Giao thức C2
+
+`main` giải mã `127.0.0.1` và `25113` làm host, port mặc định (`argv` có thể ghi đè), mở socket rồi nạp OpenCL. Chương trình liệt kê GPU, chọn thiết bị đầu tiên có chuỗi vendor là `Intel`, sau đó hỏi driver năm thông tin bằng `clGetDeviceInfo`. Các câu trả lời được ghép thành một record nhỏ:
+
+<img src="rev01_record.svg" alt="Bố cục record thông tin GPU" style="width: 100%; height: auto;" />
+
+Tiếp đó, chương trình gọi hàm giao thức khổng lồ với socket, record, chuỗi mô tả như `Intel(R) Iris(R) Xe Graphics::VEN_8086::DEV_46A6::...` và key 16 byte (`CAF3BABE 0BADF00D FEED5EED DEADC0DE`, được lưu dưới dạng XOR với `0x5a3c1e78`).
+
+Emulate hàm này từ entry, đồng thời hook callback send và receive, sẽ lộ ra định dạng truyền trên mạng. Mỗi message có dạng `type (1) | length (4) | check (2) | body`, và toàn bộ luồng được XOR với keystream. Mỗi chiều có một state keystream riêng; cả hai được tạo lại từ nonce mà server gửi trước.
+
+<img src="rev01_protocol.svg" alt="Trình tự giao thức" style="width: 100%; height: auto;" />
+
+Server mở đầu bằng `0xa7`: một nonce 16 byte cộng thêm một byte nữa. Client trả lời `0x31` bằng digest 32 byte của nonce và record GPU. Mỗi byte trong record đều ảnh hưởng đến digest, nên server cần đúng một GPU cụ thể. Record sai sẽ nhận `0x96` với body rỗng; server không tiết lộ sai ở trường nào.
+
+Instancer cấp endpoint TLS tồn tại 120 giây. Đưa byte từ server thật vào client đã emulate vẫn chạy được; từ đó mọi thử nghiệm đều dùng server thật với client được emulate hoàn toàn.
+
+### Đoán GPU
+
+Gợi ý của tác giả nói payload dùng `clCreateProgramWithBinary`, nên nó chỉ chạy trên một mẫu GPU và một driver cụ thể. Khi đã biết mục tiêu là Intel, không gian tìm kiếm chỉ còn “vài trăm khả năng”. Prefix của chuỗi mô tả trong binary cũng ghi Iris Xe.
+
+Danh sách ứng viên được dựng từ các nguồn cụ thể:
+
+- Device ID có tên “Iris Xe Graphics” trong compute-runtime của Intel (`devices_base.inl`): Tiger Lake `9A49`, `9A40`, Alder Lake-P `46A6`, `46A8`, `46AA`, Raptor Lake-P `A7A0`, `A7A1` và DG1 `4905`, `4908`, `4909`.
+- Các IP version tương ứng trong `platforms.h` của cùng dự án: `0x03000000` (12.0.0), `0x0300C000` (12.3.0), `0x03028000` (12.10.0).
+- 96 hoặc 80 compute unit.
+- 170 phiên bản Windows driver lấy từ các kho lưu trữ driver công khai.
+
+Tổng cộng có 3.400 record. Mỗi lần thử là một handshake đầy đủ với client emulated, mất khoảng 1,5 giây. Mười hai worker dùng chung một instance; một vòng lặp nhỏ khởi động lại instance khi thời gian sắp hết. Record thứ 372 được chấp nhận:
+
+```text
+VEN 8086  DEV 46A6  IP 0300C000  CU 80  DRV 32.0.101.7088
+```
+
+Đó là Iris Xe trên Alder Lake-P. Server trả lời `0xc4` với body dài 466.776 byte.
+
+### Làm keystream đủ nhanh
+
+Body đó tạo ra một vấn đề thực tế. Mỗi bước keystream đi qua một hàm đã bị flatten, khoảng 30.000 lệnh cho mỗi byte. Trong emulator, giải mã 466.776 byte mất 88 giây; các message tiếp theo của challenge đến ngay sau payload, trong khi instance chỉ sống 120 giây.
+
+Bước này hóa ra là hàm thuần chỉ phụ thuộc vào một state word 32-bit; đường chạy và địa chỉ bộ nhớ không phụ thuộc state đó. Vì vậy, ta trace một lần chạy bằng Unicorn rồi biên dịch ngược thành C, mỗi instruction thành một dòng. Sau khi đối chiếu với emulator trên các state ngẫu nhiên, bản C xử lý 466.776 bước trong 0,33 giây.
+
+<img src="rev01_keystream.svg" alt="Biên dịch trace của keystream" style="width: 100%; height: auto;" />
+
+### Payload và lớp anti-disassembly thứ hai
+
+Body sau giải mã bắt đầu bằng `\x7fELF`, với `e_machine = 0xcd`: một binary Intel GPU (“zebin”). Nó có bốn kernel `k0` đến `k3`. Công cụ của Intel không đọc được file:
+
+```text
+$ ocloc disasm -file kernel.zebin -device adl-p -dump dis
+Error missing or invalid Intel GT Notes section.
+```
+
+Lý do nằm trong section table. Tên của mọi section đều rỗng; string table, symbol table (32 entry) và metrics note đều toàn số 0. Sau section SPIR-V còn có một khoảng trống 12.584 byte không header nào trỏ tới, cũng toàn số 0.
+
+<img src="rev01_zebin_map.png" alt="Bố cục zebin với các vùng bị xóa thành số 0" style="width: 100%; height: auto;" />
+
+Các offset tên vẫn còn, và khoảng cách giữa chúng khớp chính xác với tên chuẩn (`.text.k0` dài 9 byte tính cả byte kết thúc, `.ze_info` cũng 9, `.note.intelgt.compat` là 21, v.v.). Khôi phục tên giúp `ocloc` disassemble được cả bốn kernel. Các hằng số trong đó khớp với SPIR-V nhúng bên trong, nên native code và SPIR-V mô tả cùng một chương trình.
+
+Phát hiện hữu ích hơn là section có type `0xff000009`. Đó là SPIR-V, dạng mã trung gian có thể chạy trên nhiều nền tảng, được build với `-cl-opt-disable` nên khá giống mã nguồn OpenCL. Dùng `spirv-dis` trong các gói Ubuntu thì nó dài khoảng 1.800 dòng.
+
+### Chạy kernel GPU mà không cần GPU
+
+Client gọi các kernel như sau:
+
+- `k0` chạy ở mỗi challenge của server.
+- `k1` chạy một lần trên dữ liệu tạo từ descriptor và session, nhưng không ai đọc output.
+- `k2` và `k3` chạy trong một self-test, seed lấy từ địa chỉ heap của payload; kết quả bị bỏ đi.
+
+Vậy chỉ `k0` có tác dụng. Mỗi lần gọi dùng một work-group gồm 32 lane, có subgroup shuffle, bảng cục bộ 26 x 32 và một barrier. Kernel cũng có lớp làm rối nhẹ: các helper viết bằng MBA và một phép select có mask `-(x * (x - 1) & 1)`, luôn bằng 0 vì `x * (x - 1)` luôn chẵn. Một SPIR-V interpreter nhỏ chạy 32 lane dưới dạng generator và đồng bộ chúng ở mỗi shuffle và barrier. Sau đó, `k0` và `k1` được chuyển thủ công sang Python thuần; cả hai bản dịch đều khớp với interpreter trên input ngẫu nhiên. Bản C của `k0` mất 2 ms mỗi lần gọi.
+
+### Bốn vòng proof of work
+
+Sau payload, server gửi một challenge `0x5d` cho mỗi vòng. Byte cuối của message đầu tiên cho biết có 4 vòng. Client trả lời từng vòng bằng `0xe9`:
+
+<img src="rev01_rounds.svg" alt="Chuỗi challenge qua các vòng" style="width: 100%; height: auto;" />
+
+```text
+key' = k0(H, base key)[0:4]
+R_r  = k0( bswap32(C_r) ^ R_{r-1}, key' )
+```
+
+`H` giống nhau ở mọi live session (nó đổi nếu dùng payload khác trong offline test), còn `R_0` thay đổi theo từng session. Server kiểm tra từng câu trả lời. Lật một bit trong response là nhận `0x96` rồi socket đóng. Dùng các kernel đã emulate thì cả bốn vòng đều qua.
+
+Sau đó session kết thúc như sau:
+
+```text
+S -> C  0x72 (empty)
+C -> S  0x48 (empty)
+S -> C  0x0b (empty)        the protocol function returns 42
+```
+
+Không thấy flag ở đâu cả. Client không gọi `printf` hay `fwrite`, bộ nhớ cũng không có chuỗi giống flag. Payload cũng không chứa flag, dù ở dạng rõ hay dạng mã hóa.
+
+### Kiểm tra client có giấu gì không
+
+Trước khi đoán tiếp, cần chắc rằng routine lấy flag không phải là một nhánh mà emulator chưa chạy qua. Mọi dispatcher đã flatten trong `.text` được liệt kê bằng byte pattern (`cmp eax, imm32; je rel32`), thu được 581 handler; sau đó đối chiếu chúng với các basic block đã chạy trong vài session emulated. Có 441 handler chưa từng chạy, nhưng không handler nào gọi hàm thật, chúng chỉ gọi opaque helper. Mọi direct call chưa chạy đến code thật đều nằm trong phần setup bình thường của `main`.
+
+Vậy client không có routine giấu flag. Phần còn lại phải nằm ở server.
+
+### Đoán kiểu message cần gửi
+
+Điều này khớp với nhận xét khác của tác giả: C2 không nói rõ lỗi thuộc loại nào. Client luôn trả lời `0x72` bằng `0x48`, nên câu hỏi hiển nhiên là server làm gì với các type khác.
+
+Muốn gửi message tùy ý cần hai thứ. Thứ nhất là native client tiếp quản sau khi client emulated chạy xong các vòng, dùng keystream đã biên dịch và hai state theo chiều đọc từ emulator. Thứ hai là giá trị check. Client kiểm tra check của message đến tại `0x14033a0f4`, nên đưa message vào client offline sẽ biến trường check thành oracle. Với body rỗng, check đơn giản là `0xbeef ^ (type << 8)`.
+
+Sau khi từ chối, server đóng socket; mỗi session chỉ thử được một type. Sau 255 session:
+
+<img src="rev01_type_sweep.png" alt="Phản hồi từ server cho từng message type" style="width: 100%; height: auto;" />
+
+Type `0x6e` nhận lại `0xbc` cùng body 42 byte:
+
+<img src="rev01_flag_session.png" alt="Session trả về flag" style="width: 100%; height: auto;" />
+
+## Exploit hoàn chỉnh
+
+Bài này không có script ngắn. Toàn bộ lời giải gồm client emulate từ `chall.exe` (Unicorn, quanh hàm giao thức), bước keystream đã biên dịch, bản port `k0` và một client takeover nói chuyện với giao thức native sau các vòng challenge. Các script chạy được nằm trong `scripts/`. Bước cuối, sau khi client emulated trả lời hết các vòng và dừng ở header `0x72`, là:
+
+```python
+# keystream states for both directions, read out of the emulated client at the 0x72 header
+SS = {'r': struct.unpack('<I', rd(TK['rctx'], 4))[0], 's': struct.unpack('<I', rd(TK['sctx'], 4))[0]}
+
+def ks(n, d):                       # n keystream bytes for direction d, using the compiled step
+    pr = subprocess.run([os.path.expanduser('~/fstep'), D + 'fstep_init.bin', '%08x' % SS[d], str(n), 'd'],
+                        capture_output=True)
+    SS[d] = int(pr.stderr.strip(), 16)
+    return pr.stdout
+
+def xr(a, b): return bytes(p ^ q for p, q in zip(a, b))
+
+def recv_msg(timeout=8):
+    sock.settimeout(timeout)
+    c = recvn(7)
+    if c is None: return ('CLOSED',)
+    h_ = xr(c, ks(7, 'r')); t = h_[0]; n = struct.unpack('<I', h_[1:5])[0]; w = struct.unpack('<H', h_[5:7])[0]
+    body = xr(recvn(n), ks(n, 'r')) if n else b''
+    return ('MSG', hex(t), n, hex(w), body[:200].hex())
+
+def send_msg(t, body=b'', w=None):
+    if w is None: w = 0xbeef ^ (t << 8)        # check value for an empty body
+    h_ = bytes([t]) + struct.pack('<I', len(body)) + struct.pack('<H', w)
+    sock.sendall(xr(h_, ks(7, 's')))
+
+log('S>', recv_msg())                           # 0x72
+send_msg(0x6e); log('C> type', hex(0x6e))      # instead of the client's 0x48
+log('S>', recv_msg())                           # 0xbc + flag
+```
+
+Output từ session lấy được flag (số giây tính từ lúc kết nối):
+
+```text
+[   7.7] S> ('MSG', '0x72', 0, '0xccef', '')
+[   7.7] C> type 0x6e body 0
+[   7.8] S> ('MSG', '0xbc', 42, '0x3ba1', '43534356323032367b776176335f316f636b65645f63726f73355f31614e655f48344e647368614b657d')
+```
+
+```text
+>>> bytes.fromhex('43534356323032367b776176335f316f636b65645f63726f73355f31614e655f48344e647368614b657d')
+b'CSCV2026{wav3_1ocked_cros5_1aNe_H4NdshaKe}'
+```
+
+## Vì sao cách này hiệu quả
+
+```text
+chall.exe (MBA, flattening, hashed APIs, encrypted + decoy strings)
+  ↓ emulate hàm giao thức, hook send/recv
+giao thức C2 có frame và hai keystream
+  ↓ đoán record GPU từ bảng thiết bị và IP của Intel
+payload: Intel zebin bị strip, nhúng SPIR-V
+  ↓ khôi phục tên section, diễn giải SPIR-V, port k0
+bốn vòng challenge nối tiếp, đều được chấp nhận
+  ↓ native takeover + oracle cho trường check
+mỗi session thử một message type
+  ↓
+0x6e -> 0xbc -> flag
+```
+
+Những quan sát dẫn đến lời giải:
+
+- Emulate client rồi nói chuyện với server thật nhanh hơn nhiều so với đọc 15 MB MBA.
+- Digest `0x31` phủ mọi byte của record, nên record phải đúng toàn bộ; source của Intel thu hẹp danh sách còn vài nghìn khả năng.
+- Keystream là một bước thuần 32-bit với đường chạy cố định, nhờ vậy có thể biên dịch một trace thành C.
+- Zebin bị strip có chủ ý, nhưng offset tên còn nguyên và SPIR-V vẫn ở đó.
+- Chỉ `k0` ảnh hưởng đến giao thức; `k1`, `k2`, `k3` chỉ làm nhiễu.
+- Kiểm tra toàn bộ dispatcher cho thấy client không giấu đường lấy flag nào, từ đó mới có cơ sở fuzz server.
+- Server chỉ trả flag cho một message type mà client thật không bao giờ gửi.
+
+## Lời kết
+
+Challenge chồng lên nhau ba kiểu khó. Obfuscation trong `chall.exe` rất nặng, nhưng nó làm việc đọc code chậm hơn là làm bài toán khó hiểu; emulation đi xuyên qua lớp đó. Zebin bị strip mới là anti-disassembly thật, và nó chỉ tốn thời gian cho đến khi ta nhận ra các offset tên vẫn còn. Phần guessing mới là thứ gây đau đầu, hai lần: đoán record GPU, rồi đoán reply type mà client thật không bao giờ dùng.
+
+Flag có cụm “wave locked, cross lane handshake”, mô tả khá đúng kernel: 32 lane chạy đồng bộ và đổi giá trị qua subgroup shuffle.
+
+```text
+CSCV2026{wav3_1ocked_cros5_1aNe_H4NdshaKe}
+```

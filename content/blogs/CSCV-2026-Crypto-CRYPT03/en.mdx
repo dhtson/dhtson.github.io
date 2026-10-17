@@ -1,0 +1,281 @@
+---
+title: "Crypto / CRYPT03 - CSCV 2026"
+excerpt: "A writeup on the Crypto / CRYPT03 challenge from CSCV 2026"
+category:
+  - "Writeups"
+tags:
+  - "CTF"
+  - "Crypto"
+  - "AES"
+  - "Square Attack"
+  - "Integral Cryptanalysis"
+  - "Partial Sums"
+  - "CUDA"
+  - "CSCV"
+  - "2026"
+authors:
+    - "harshfeudal"
+---
+
+## The Challenge
+
+*CRYPT03*
+
+*Description*
+
+*give_to_player.zip*
+
+*`nc 59.153.245.196 1338`*
+
+The attachment has three files: `chall.py` (the service), `aes.py` (a plain Python AES with a configurable round count) and `core.c` (a fast AES-NI helper). Connecting prints a banner and a small menu:
+
+```text
+SEVENFOLD / INTEGRAL SIX
+PUBLIC={"rounds": 6, "nonce": "80e5faeca1828e3c", "flag_ct": "57e00d56...", "bases": [...], "pt": "000...0", "ct": "5d3d1ede1baef0f9beb46d8ea6256283"}
+1. Encrypt
+2. Get structure bitmap
+3. Exit
+```
+
+The flag is encrypted with AES-128 reduced to six rounds, in CTR mode. The banner more or less names the attack already: "integral", six rounds.
+
+The final flag is:
+
+```text
+CSCV2026{sevenfold_aes7r_gpu_2_rtx_5090_hehe_hihi}
+```
+
+<img src="sevenfold_solve_flow.svg" alt="High-level solve path for CRYPT03" style="width: 100%; height: auto;" />
+
+## The Walkthrough
+
+### What the service gives us
+
+`chall.py` keeps one random key, one nonce and six random 16-byte "bases" per instance. The flag (50 bytes, so four CTR blocks) is encrypted as `flag ^ AES6(nonce || counter)`.
+
+Option 1 is an encryption oracle with exactly one restriction:
+
+```python
+if len(p) != 16 or p[:8] == nonce and int.from_bytes(p[8:], 'little') < (len(flag)+15)//16:
+    print('Rejected')
+```
+
+It refuses the four counter blocks of the flag and nothing else. The comparison is on raw bytes of a fixed length, so there is no parsing trick to slip a counter block through. The key has to be recovered.
+
+Option 2 is the interesting one. It asks for a `group` (0 to 3) and a `structure` (0 to 5), then runs this loop in `core.c`:
+
+```c
+for (uint64_t i=0;i<count;i++) {          // count = 2^32
+    p[0] = (uint8_t)i;
+    p[5] = (uint8_t)(i>>8);
+    p[10] = (uint8_t)(i>>16);
+    p[15] = (uint8_t)(i>>24);
+    __m128i x = run(k, _mm_loadu_si128((const __m128i*)p));
+    _mm_storeu_si128((__m128i*)c, x);
+    uint32_t idx = ((uint32_t)c[loc[3]]<<24) | ((uint32_t)c[loc[2]]<<16) | ((uint32_t)c[loc[1]]<<8) | c[loc[0]];
+    __atomic_fetch_xor(bits + (idx>>6), 1ULL << (idx&63), __ATOMIC_RELAXED);
+}
+```
+
+Bytes 0, 5, 10 and 15 form the main diagonal of the AES state. The other twelve bytes come from `bases[structure]`, and every base has `b[1] = nonce[1] ^ 0xff`, so a structure can never contain a counter block. All 2^32 values of the diagonal are encrypted, four ciphertext bytes are picked, and bit `idx` of a 2^32-bit array is flipped. What we receive is a 512 MiB parity bitmap, where bit `v` is set when the four chosen output bytes take the value `v` an odd number of times.
+
+`group` picks which four ciphertext bytes are read:
+
+```text
+group 0: c[0], c[13], c[10], c[7]
+group 1: c[4], c[1],  c[14], c[11]
+group 2: c[8], c[5],  c[2],  c[15]
+group 3: c[12], c[9], c[6],  c[3]
+```
+
+Each group is one output diagonal, which after the final ShiftRows lines up with one column of the state before round 6. The first release of the attachment only had group 0. The `group` prompt came with an updated attachment during the CTF, and that update is what makes a full key recovery possible.
+
+A real bitmap looks like noise:
+
+<img src="sevenfold_bitmap_crop.png" alt="A crop of a real structure bitmap" style="width: 55%; height: auto;" />
+
+The density is a nice sanity check. 2^32 inputs land in 2^32 buckets, so each bucket count is roughly Poisson(1), and the probability that a Poisson(1) count is odd is `(1 - e^-2) / 2 = 0.4323`. The downloaded file measured 0.4323.
+
+### The integral property
+
+Take a set of 2^32 plaintexts where one diagonal runs through every value and the other twelve bytes stay fixed. Following that set through AES:
+
+<img src="sevenfold_integral.svg" alt="Active and balanced bytes through four rounds" style="width: 100%; height: auto;" />
+
+After round 1 the diagonal has become one full column. After round 2 every column depends on every byte of that column, and after round 3 each column is a bijection of the 32-bit input. After the fourth AddRoundKey, every byte of the state `s4` is balanced, meaning its XOR over all 2^32 texts is zero. This is the classic Square property, and it holds whatever the key is.
+
+Rounds 5 and 6 still sit between `s4` and the ciphertext, so we peel them from the ciphertext side. For group `g`, the four ciphertext bytes give column `g` of the state before round 6:
+
+```text
+s5[j][g] = InvS(c[loc_j] ^ k6[loc_j])        j = 0..3
+```
+
+Round 5 ends with MixColumns, which is linear, so we can move its key through it with the usual equivalent key `k5' = InvMixColumns(k5 column g)`. One byte of `s4` is then
+
+```text
+s4 byte = InvS( XOR_j M[r][j] * s5[j][g]  ^  k5'[r] )
+```
+
+where `M` is the InvMixColumns matrix. For one row `r`, that byte depends on five key bytes: the four bytes of `k6` on the diagonal and one byte of `k5'`. The right guess makes the XOR over the structure equal to zero. A wrong one does that with probability 2^-8.
+
+### Why a parity bitmap is enough
+
+The test is an XOR of `f(v)` over all 2^32 texts, where `v` is the four output bytes. If a value `v` shows up `n` times, it contributes `n * f(v)` in GF(2), which is `f(v)` when `n` is odd and nothing when `n` is even. So
+
+```text
+XOR over texts of f(v)  =  XOR over {v : bit[v] = 1} of f(v)
+```
+
+The bitmap holds exactly the information the attack needs, compressed from 64 GiB of ciphertext into 512 MiB.
+
+### Partial sums
+
+Per row there are 2^40 key guesses and about 2^31 set bits per bitmap. Done naively that is 2^71 work. The Ferguson et al. partial-sum trick guesses one byte at a time and folds the data after each guess, keeping only parities:
+
+<img src="sevenfold_partial_sums.svg" alt="Partial-sum stages" style="width: 100%; height: auto;" />
+
+```text
+step A  guess k0,k1   (v0,v1,v2,v3)  2^32 bits  ->  (t1,v2,v3)  2^24 bits
+step B  guess k2      (t1,v2,v3)               ->  (t2,v3)     2^16 bits
+step C  guess k3      (t2,v3)                  ->  t3          256 bits
+step D  guess k5'     t3                       ->  8-bit sum, keep the key if it is 0
+```
+
+Every intermediate table is a bit vector, which is what makes it fit on a GPU.
+
+The first CUDA version flipped one output bit per input bit and needed about 92 seconds per outer key byte. With 256 outer values and several structures, that would have taken most of a day. The rewrite works on whole 256-bit rows instead:
+
+- In steps B and C, the output for one key guess is an XOR of rows shifted by `g(v ^ k)`. A shift by `u` of a 256-bit row is a word permutation (`u >> 5`) plus a bit rotation inside each word (`u & 31`). Each CUDA block precomputes the 32 bit-rotated copies of a chunk of rows in shared memory, so every thread does 8 loads and 8 XORs per row.
+- Step A uses the same idea in transposed form, then transposes a 256 x 256 bit matrix in shared memory.
+- Step D is bitsliced: a 64 KB table holds, for every `t` and output bit, the 256-bit mask over `k5'`, so the whole zero test is a handful of ANDs.
+
+On a laptop RTX 3050 this brought one pass down to about 1.1 seconds (step A 0.24 s, B 0.17 s, C+D 0.66 s).
+
+Before spending hours on server data, the code was tested on a bitmap generated locally with the challenge's own `core.c` and the key `000102...0f`. It recovered the expected bytes. With a single structure, 63.3% of the `(k0..k3)` guesses survived, which matches `1 - (1 - 2^-8)^256 = 0.632`: a wrong guess survives if any one of the 256 values of `k5'` happens to give a zero sum.
+
+That number also tells us how many structures to download:
+
+<img src="sevenfold_survivors.png" alt="Expected wrong survivors versus number of structures" style="width: 75%; height: auto;" />
+
+With one row, five structures leave about one wrong key out of 2^32.
+
+### Group 0
+
+Five structures of group 0 and all 256 outer passes left exactly one candidate:
+
+```text
+k6[0]=0x41  k6[13]=0x16  k6[10]=0x66  k6[7]=0x96     k5'(row 0)=0x2a
+```
+
+It held on the sixth structure and on all four rows, which also gives the whole of `k5'` and therefore `k5` column 0: `b9 ba bf 16`.
+
+### Using the key schedule
+
+Knowing a column of `k5` links bytes of `k6` through the AES-128 key schedule. With `w20..w23 = k5` and `w24..w27 = k6`:
+
+```text
+w24 = w20 ^ SubWord(RotWord(w23)) ^ Rcon(6)
+w23 = w27 ^ w26
+```
+
+Row by row this gives relations such as `k6[0] = w20[0] ^ S(k6[13] ^ k6[9]) ^ 0x20`, which pins `k6[9] = 0x3b` straight away. The other rows tie `k6[1]`, `k6[2]` and `k6[3]` to bytes we were about to search for.
+
+### Groups 3 and 1, under time pressure
+
+By the time the updated attachment was out there was not much time left, and the server delivered only about 1.8 MB/s. Downloading five 512 MiB files per group was not realistic, so only two structures per group were fetched. Two things made up for the weaker data:
+
+- every candidate was tested on all four InvMixColumns rows at once (they share `k0..k3` and each has its own `k5'` byte), so a wrong key survives with probability about `(256 * 2^-16)^4 = 2^-32`;
+- the key-schedule relations cut the search space before the GPU even started.
+
+The multi-row solver was checked again on group 0 with two structures, and it returned the same four bytes.
+
+Group 3 was quick because `k6[9]` was already known. It gave `k6[12]=0xd8, k6[6]=0x2c, k6[3]=0x80`, and the row 3 relation then gave `k6[8]=0xed`. Group 1 gave `k6[4]=0x5a, k6[1]=0x57, k6[14]=0x35, k6[11]=0xe5`.
+
+Group 2 never had to be downloaded. After group 1 only `k6[5]` and `k6[15]` were unknown, `k6[2]` follows from row 2, and 2^16 guesses checked against the known pair `E(0) = 5d3d...6283` take a few seconds on a CPU.
+
+<img src="sevenfold_k6_sources.svg" alt="Where each byte of k6 came from" style="width: 90%; height: auto;" />
+
+<img src="sevenfold_solver_output.png" alt="Solver output" style="width: 100%; height: auto;" />
+
+## Final Exploit
+
+The heavy part is the GPU search (`scripts/partial_sums_gpu.py` and `scripts/group_solve.py`). Once the bytes above are known, the last step is short: brute-force the two missing bytes, invert the key schedule from `k6`, check `E(0)`, and decrypt.
+
+```python
+#!/usr/bin/env python3
+import sys
+from aes import AES6, crypt, SBOX, RCON
+
+K6 = {0: 0x41, 13: 0x16, 10: 0x66, 7: 0x96, 9: 0x3b,
+      12: 0xd8, 6: 0x2c, 3: 0x80, 8: 0xed,
+      4: 0x5a, 1: 0x57, 14: 0x35, 11: 0xe5}
+NONCE = bytes.fromhex('80e5faeca1828e3c')
+FLAG_CT = bytes.fromhex('57e00d56e9822cbbdaaacadf94de6574cb141679a2995e1ec744c9668cdc9fcc94985718a3322587ba1ab69a8d76878798a9')
+E0 = bytes.fromhex('5d3d1ede1baef0f9beb46d8ea6256283')
+
+def master_from_k6(k6):
+    w = [None] * 28
+    for c in range(4):
+        w[24 + c] = list(k6[4 * c:4 * c + 4])
+    for i in range(27, 3, -1):
+        t = w[i - 1][:]
+        if i % 4 == 0:
+            t = [SBOX[x] for x in t[1:] + t[:1]]
+            t[0] ^= RCON[i // 4]
+        w[i - 4] = [a ^ b for a, b in zip(w[i], t)]
+    return bytes(sum(w[0:4], []))
+
+for b15 in range(256):
+    b2 = 0xbf ^ SBOX[b15 ^ K6[11]]
+    for b5 in range(256):
+        k6 = bytearray(16)
+        for i, v in K6.items():
+            k6[i] = v
+        k6[15], k6[2], k6[5] = b15, b2, b5
+        key = master_from_k6(bytes(k6))
+        if AES6(key).encrypt_block(bytes(16)) == E0:
+            print('key', key.hex(), 'k6', bytes(k6).hex())
+            print(crypt(FLAG_CT, key, NONCE))
+            sys.exit(0)
+```
+
+Output:
+
+```text
+key aadfdc5eb4f7e79a2a8917e30f28d046 k6 41574d805a1d2c96ed3b66e5d81635e1
+b'CSCV2026{sevenfold_aes7r_gpu_2_rtx_5090_hehe_hihi}'
+```
+
+## Why This Works
+
+```text
+2^32 plaintexts, one active diagonal
+  ↓ 4 rounds of AES
+every byte of s4 balanced (XOR = 0)
+  ↓ server folds 2^32 ciphertexts into a parity bitmap
+the XOR test only needs odd multiplicities
+  ↓ partial sums, one key byte per stage, on the GPU
+4 bytes of k6 + 1 byte of k5' per row
+  ↓ groups 0, 3, 1 + key-schedule relations
+13 bytes of k6, 2^16 left
+  ↓ brute force against E(0), invert the key schedule
+master key -> CTR keystream -> flag
+```
+
+The points that mattered:
+
+- six-round AES is the textbook target of the Square attack, and the service hands out exactly the data that attack consumes;
+- a parity bitmap is enough because the test is a GF(2) sum, so even multiplicities cancel;
+- partial sums turn 2^71 into something a laptop GPU finishes in about a second per pass, once the data is handled as bit vectors;
+- testing on a locally generated bitmap with a known key, before touching the server's data, caught bugs cheaply;
+- relations from the AES key schedule are a free filter, and they made group 2 unnecessary.
+
+## Final Words
+
+The flag jokes about solving with an RTX 5090. The real thing ran on a 4 GB laptop GPU, which is a good reminder that the bottleneck was never the hardware: the first kernel was eighty times slower than the second one on the same card.
+
+The download speed near the end was the real enemy. Two structures per group plus four rows per test was a compromise forced by the clock, and it held up.
+
+```text
+CSCV2026{sevenfold_aes7r_gpu_2_rtx_5090_hehe_hihi}
+```

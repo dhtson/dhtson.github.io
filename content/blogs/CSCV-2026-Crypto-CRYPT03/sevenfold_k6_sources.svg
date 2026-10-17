@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="400" viewBox="0 0 900 400">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .small { font-size: 12px; }
+      .dim { fill: #d0d0d0; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .dash { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .fill { fill: #ffffff; fill-opacity: 0.22; stroke: #ffffff; stroke-width: 1.4; }
+      .hot { fill: #ffffff; fill-opacity: 0.5; stroke: #ffffff; stroke-width: 1.4; }
+      .cell { fill: none; stroke: #ffffff; stroke-width: 1.2; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .plain { fill: none; stroke: #ffffff; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="450" y="30" text-anchor="middle" class="title">Origin of every k6 byte</text>
+  <text x="95" y="62" text-anchor="middle" class="small dim">col 0</text>
+  <rect x="60" y="70" width="70" height="70" class="hot"/>
+  <text x="95" y="100" text-anchor="middle">41</text>
+  <text x="95" y="120" text-anchor="middle" class="small dim">[0] g0</text>
+  <rect x="60" y="140" width="70" height="70" class="fill"/>
+  <text x="95" y="170" text-anchor="middle">57</text>
+  <text x="95" y="190" text-anchor="middle" class="small dim">[1] g1</text>
+  <rect x="60" y="210" width="70" height="70" class="cell"/>
+  <text x="95" y="240" text-anchor="middle">4d</text>
+  <text x="95" y="260" text-anchor="middle" class="small dim">[2] ks</text>
+  <rect x="60" y="280" width="70" height="70" class="fill"/>
+  <text x="95" y="310" text-anchor="middle">80</text>
+  <text x="95" y="330" text-anchor="middle" class="small dim">[3] g3</text>
+  <text x="165" y="62" text-anchor="middle" class="small dim">col 1</text>
+  <rect x="130" y="70" width="70" height="70" class="fill"/>
+  <text x="165" y="100" text-anchor="middle">5a</text>
+  <text x="165" y="120" text-anchor="middle" class="small dim">[4] g1</text>
+  <rect x="130" y="140" width="70" height="70" class="dash"/>
+  <text x="165" y="170" text-anchor="middle">1d</text>
+  <text x="165" y="190" text-anchor="middle" class="small dim">[5] bf</text>
+  <rect x="130" y="210" width="70" height="70" class="fill"/>
+  <text x="165" y="240" text-anchor="middle">2c</text>
+  <text x="165" y="260" text-anchor="middle" class="small dim">[6] g3</text>
+  <rect x="130" y="280" width="70" height="70" class="hot"/>
+  <text x="165" y="310" text-anchor="middle">96</text>
+  <text x="165" y="330" text-anchor="middle" class="small dim">[7] g0</text>
+  <text x="235" y="62" text-anchor="middle" class="small dim">col 2</text>
+  <rect x="200" y="70" width="70" height="70" class="cell"/>
+  <text x="235" y="100" text-anchor="middle">ed</text>
+  <text x="235" y="120" text-anchor="middle" class="small dim">[8] ks</text>
+  <rect x="200" y="140" width="70" height="70" class="cell"/>
+  <text x="235" y="170" text-anchor="middle">3b</text>
+  <text x="235" y="190" text-anchor="middle" class="small dim">[9] ks</text>
+  <rect x="200" y="210" width="70" height="70" class="hot"/>
+  <text x="235" y="240" text-anchor="middle">66</text>
+  <text x="235" y="260" text-anchor="middle" class="small dim">[10] g0</text>
+  <rect x="200" y="280" width="70" height="70" class="fill"/>
+  <text x="235" y="310" text-anchor="middle">e5</text>
+  <text x="235" y="330" text-anchor="middle" class="small dim">[11] g1</text>
+  <text x="305" y="62" text-anchor="middle" class="small dim">col 3</text>
+  <rect x="270" y="70" width="70" height="70" class="fill"/>
+  <text x="305" y="100" text-anchor="middle">d8</text>
+  <text x="305" y="120" text-anchor="middle" class="small dim">[12] g3</text>
+  <rect x="270" y="140" width="70" height="70" class="hot"/>
+  <text x="305" y="170" text-anchor="middle">16</text>
+  <text x="305" y="190" text-anchor="middle" class="small dim">[13] g0</text>
+  <rect x="270" y="210" width="70" height="70" class="fill"/>
+  <text x="305" y="240" text-anchor="middle">35</text>
+  <text x="305" y="260" text-anchor="middle" class="small dim">[14] g1</text>
+  <rect x="270" y="280" width="70" height="70" class="dash"/>
+  <text x="305" y="310" text-anchor="middle">e1</text>
+  <text x="305" y="330" text-anchor="middle" class="small dim">[15] bf</text>
+  <rect x="400" y="96" width="22" height="22" class="hot"/>
+  <text x="436" y="112" text-anchor="start" class="small">g0</text>
+  <text x="470" y="112" text-anchor="start" class="small">group 0 bitmaps, 5 structures (also gives k5 col 0)</text>
+  <rect x="400" y="136" width="22" height="22" class="fill"/>
+  <text x="436" y="152" text-anchor="start" class="small">g3</text>
+  <text x="470" y="152" text-anchor="start" class="small">group 3 bitmaps, 2 structures x 4 rows</text>
+  <rect x="400" y="176" width="22" height="22" class="fill"/>
+  <text x="436" y="192" text-anchor="start" class="small">g1</text>
+  <text x="470" y="192" text-anchor="start" class="small">group 1 bitmaps, 2 structures x 4 rows</text>
+  <rect x="400" y="216" width="22" height="22" class="cell"/>
+  <text x="436" y="232" text-anchor="start" class="small">ks</text>
+  <text x="470" y="232" text-anchor="start" class="small">key-schedule relation with k5 col 0</text>
+  <rect x="400" y="256" width="22" height="22" class="dash"/>
+  <text x="436" y="272" text-anchor="start" class="small">bf</text>
+  <text x="470" y="272" text-anchor="start" class="small">2^16 brute force against E(0)</text>
+  <text x="436" y="330" text-anchor="start" class="small dim">group 2 was never downloaded</text>
+</svg>

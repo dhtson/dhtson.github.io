@@ -1,0 +1,208 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .small { font-size: 12px; }
+      .dim { fill: #d0d0d0; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .dash { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .fill { fill: #ffffff; fill-opacity: 0.22; stroke: #ffffff; stroke-width: 1.4; }
+      .hot { fill: #ffffff; fill-opacity: 0.5; stroke: #ffffff; stroke-width: 1.4; }
+      .cell { fill: none; stroke: #ffffff; stroke-width: 1.2; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .plain { fill: none; stroke: #ffffff; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="500" y="30" text-anchor="middle" class="title">One active diagonal, four rounds later: every byte balanced</text>
+  <text x="92" y="76" text-anchor="middle">plaintext set</text>
+  <rect x="40" y="90" width="26" height="26" class="hot"/>
+  <text x="53" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="66" y="90" width="26" height="26" class="cell"/>
+  <text x="79" y="108" text-anchor="middle" class="small">C</text>
+  <rect x="92" y="90" width="26" height="26" class="cell"/>
+  <text x="105" y="108" text-anchor="middle" class="small">C</text>
+  <rect x="118" y="90" width="26" height="26" class="cell"/>
+  <text x="131" y="108" text-anchor="middle" class="small">C</text>
+  <rect x="40" y="116" width="26" height="26" class="cell"/>
+  <text x="53" y="134" text-anchor="middle" class="small">C</text>
+  <rect x="66" y="116" width="26" height="26" class="hot"/>
+  <text x="79" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="92" y="116" width="26" height="26" class="cell"/>
+  <text x="105" y="134" text-anchor="middle" class="small">C</text>
+  <rect x="118" y="116" width="26" height="26" class="cell"/>
+  <text x="131" y="134" text-anchor="middle" class="small">C</text>
+  <rect x="40" y="142" width="26" height="26" class="cell"/>
+  <text x="53" y="160" text-anchor="middle" class="small">C</text>
+  <rect x="66" y="142" width="26" height="26" class="cell"/>
+  <text x="79" y="160" text-anchor="middle" class="small">C</text>
+  <rect x="92" y="142" width="26" height="26" class="hot"/>
+  <text x="105" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="118" y="142" width="26" height="26" class="cell"/>
+  <text x="131" y="160" text-anchor="middle" class="small">C</text>
+  <rect x="40" y="168" width="26" height="26" class="cell"/>
+  <text x="53" y="186" text-anchor="middle" class="small">C</text>
+  <rect x="66" y="168" width="26" height="26" class="cell"/>
+  <text x="79" y="186" text-anchor="middle" class="small">C</text>
+  <rect x="92" y="168" width="26" height="26" class="cell"/>
+  <text x="105" y="186" text-anchor="middle" class="small">C</text>
+  <rect x="118" y="168" width="26" height="26" class="hot"/>
+  <text x="131" y="186" text-anchor="middle" class="small">A</text>
+  <line x1="158" y1="142" x2="216" y2="142" class="line"/>
+  <text x="282" y="76" text-anchor="middle">after round 1</text>
+  <rect x="230" y="90" width="26" height="26" class="hot"/>
+  <text x="243" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="256" y="90" width="26" height="26" class="cell"/>
+  <text x="269" y="108" text-anchor="middle" class="small">C</text>
+  <rect x="282" y="90" width="26" height="26" class="cell"/>
+  <text x="295" y="108" text-anchor="middle" class="small">C</text>
+  <rect x="308" y="90" width="26" height="26" class="cell"/>
+  <text x="321" y="108" text-anchor="middle" class="small">C</text>
+  <rect x="230" y="116" width="26" height="26" class="hot"/>
+  <text x="243" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="256" y="116" width="26" height="26" class="cell"/>
+  <text x="269" y="134" text-anchor="middle" class="small">C</text>
+  <rect x="282" y="116" width="26" height="26" class="cell"/>
+  <text x="295" y="134" text-anchor="middle" class="small">C</text>
+  <rect x="308" y="116" width="26" height="26" class="cell"/>
+  <text x="321" y="134" text-anchor="middle" class="small">C</text>
+  <rect x="230" y="142" width="26" height="26" class="hot"/>
+  <text x="243" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="256" y="142" width="26" height="26" class="cell"/>
+  <text x="269" y="160" text-anchor="middle" class="small">C</text>
+  <rect x="282" y="142" width="26" height="26" class="cell"/>
+  <text x="295" y="160" text-anchor="middle" class="small">C</text>
+  <rect x="308" y="142" width="26" height="26" class="cell"/>
+  <text x="321" y="160" text-anchor="middle" class="small">C</text>
+  <rect x="230" y="168" width="26" height="26" class="hot"/>
+  <text x="243" y="186" text-anchor="middle" class="small">A</text>
+  <rect x="256" y="168" width="26" height="26" class="cell"/>
+  <text x="269" y="186" text-anchor="middle" class="small">C</text>
+  <rect x="282" y="168" width="26" height="26" class="cell"/>
+  <text x="295" y="186" text-anchor="middle" class="small">C</text>
+  <rect x="308" y="168" width="26" height="26" class="cell"/>
+  <text x="321" y="186" text-anchor="middle" class="small">C</text>
+  <line x1="348" y1="142" x2="406" y2="142" class="line"/>
+  <text x="472" y="76" text-anchor="middle">after round 2</text>
+  <rect x="420" y="90" width="26" height="26" class="hot"/>
+  <text x="433" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="446" y="90" width="26" height="26" class="hot"/>
+  <text x="459" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="472" y="90" width="26" height="26" class="hot"/>
+  <text x="485" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="498" y="90" width="26" height="26" class="hot"/>
+  <text x="511" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="420" y="116" width="26" height="26" class="hot"/>
+  <text x="433" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="446" y="116" width="26" height="26" class="hot"/>
+  <text x="459" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="472" y="116" width="26" height="26" class="hot"/>
+  <text x="485" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="498" y="116" width="26" height="26" class="hot"/>
+  <text x="511" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="420" y="142" width="26" height="26" class="hot"/>
+  <text x="433" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="446" y="142" width="26" height="26" class="hot"/>
+  <text x="459" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="472" y="142" width="26" height="26" class="hot"/>
+  <text x="485" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="498" y="142" width="26" height="26" class="hot"/>
+  <text x="511" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="420" y="168" width="26" height="26" class="hot"/>
+  <text x="433" y="186" text-anchor="middle" class="small">A</text>
+  <rect x="446" y="168" width="26" height="26" class="hot"/>
+  <text x="459" y="186" text-anchor="middle" class="small">A</text>
+  <rect x="472" y="168" width="26" height="26" class="hot"/>
+  <text x="485" y="186" text-anchor="middle" class="small">A</text>
+  <rect x="498" y="168" width="26" height="26" class="hot"/>
+  <text x="511" y="186" text-anchor="middle" class="small">A</text>
+  <line x1="538" y1="142" x2="596" y2="142" class="line"/>
+  <text x="662" y="76" text-anchor="middle">after round 3</text>
+  <rect x="610" y="90" width="26" height="26" class="hot"/>
+  <text x="623" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="636" y="90" width="26" height="26" class="hot"/>
+  <text x="649" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="662" y="90" width="26" height="26" class="hot"/>
+  <text x="675" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="688" y="90" width="26" height="26" class="hot"/>
+  <text x="701" y="108" text-anchor="middle" class="small">A</text>
+  <rect x="610" y="116" width="26" height="26" class="hot"/>
+  <text x="623" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="636" y="116" width="26" height="26" class="hot"/>
+  <text x="649" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="662" y="116" width="26" height="26" class="hot"/>
+  <text x="675" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="688" y="116" width="26" height="26" class="hot"/>
+  <text x="701" y="134" text-anchor="middle" class="small">A</text>
+  <rect x="610" y="142" width="26" height="26" class="hot"/>
+  <text x="623" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="636" y="142" width="26" height="26" class="hot"/>
+  <text x="649" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="662" y="142" width="26" height="26" class="hot"/>
+  <text x="675" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="688" y="142" width="26" height="26" class="hot"/>
+  <text x="701" y="160" text-anchor="middle" class="small">A</text>
+  <rect x="610" y="168" width="26" height="26" class="hot"/>
+  <text x="623" y="186" text-anchor="middle" class="small">A</text>
+  <rect x="636" y="168" width="26" height="26" class="hot"/>
+  <text x="649" y="186" text-anchor="middle" class="small">A</text>
+  <rect x="662" y="168" width="26" height="26" class="hot"/>
+  <text x="675" y="186" text-anchor="middle" class="small">A</text>
+  <rect x="688" y="168" width="26" height="26" class="hot"/>
+  <text x="701" y="186" text-anchor="middle" class="small">A</text>
+  <line x1="728" y1="142" x2="786" y2="142" class="line"/>
+  <text x="852" y="76" text-anchor="middle">s4 (after k4)</text>
+  <rect x="800" y="90" width="26" height="26" class="fill"/>
+  <text x="813" y="108" text-anchor="middle" class="small">B</text>
+  <rect x="826" y="90" width="26" height="26" class="fill"/>
+  <text x="839" y="108" text-anchor="middle" class="small">B</text>
+  <rect x="852" y="90" width="26" height="26" class="fill"/>
+  <text x="865" y="108" text-anchor="middle" class="small">B</text>
+  <rect x="878" y="90" width="26" height="26" class="fill"/>
+  <text x="891" y="108" text-anchor="middle" class="small">B</text>
+  <rect x="800" y="116" width="26" height="26" class="fill"/>
+  <text x="813" y="134" text-anchor="middle" class="small">B</text>
+  <rect x="826" y="116" width="26" height="26" class="fill"/>
+  <text x="839" y="134" text-anchor="middle" class="small">B</text>
+  <rect x="852" y="116" width="26" height="26" class="fill"/>
+  <text x="865" y="134" text-anchor="middle" class="small">B</text>
+  <rect x="878" y="116" width="26" height="26" class="fill"/>
+  <text x="891" y="134" text-anchor="middle" class="small">B</text>
+  <rect x="800" y="142" width="26" height="26" class="fill"/>
+  <text x="813" y="160" text-anchor="middle" class="small">B</text>
+  <rect x="826" y="142" width="26" height="26" class="fill"/>
+  <text x="839" y="160" text-anchor="middle" class="small">B</text>
+  <rect x="852" y="142" width="26" height="26" class="fill"/>
+  <text x="865" y="160" text-anchor="middle" class="small">B</text>
+  <rect x="878" y="142" width="26" height="26" class="fill"/>
+  <text x="891" y="160" text-anchor="middle" class="small">B</text>
+  <rect x="800" y="168" width="26" height="26" class="fill"/>
+  <text x="813" y="186" text-anchor="middle" class="small">B</text>
+  <rect x="826" y="168" width="26" height="26" class="fill"/>
+  <text x="839" y="186" text-anchor="middle" class="small">B</text>
+  <rect x="852" y="168" width="26" height="26" class="fill"/>
+  <text x="865" y="186" text-anchor="middle" class="small">B</text>
+  <rect x="878" y="168" width="26" height="26" class="fill"/>
+  <text x="891" y="186" text-anchor="middle" class="small">B</text>
+  <rect x="120" y="236" width="20" height="20" class="hot"/>
+  <text x="130" y="251" text-anchor="middle" class="small">A</text>
+  <text x="150" y="251" text-anchor="start" class="small">takes every value (per column)</text>
+  <rect x="450" y="236" width="20" height="20" class="cell"/>
+  <text x="460" y="251" text-anchor="middle" class="small">C</text>
+  <text x="480" y="251" text-anchor="start" class="small">constant</text>
+  <rect x="700" y="236" width="20" height="20" class="fill"/>
+  <text x="710" y="251" text-anchor="middle" class="small">B</text>
+  <text x="730" y="251" text-anchor="start" class="small">XOR over 2^32 texts = 0</text>
+  <rect x="60" y="290" width="380" height="100" rx="10" class="dash"/>
+  <text x="250" y="327" text-anchor="middle">rounds 5 and 6 are peeled from the</text>
+  <text x="250" y="345" text-anchor="middle">ciphertext side: 4 bytes of k6 and</text>
+  <text x="250" y="363" text-anchor="middle">1 byte of k5' = InvMC(k5) per row</text>
+  <rect x="560" y="290" width="380" height="100" rx="10" class="dash"/>
+  <text x="750" y="327" text-anchor="middle">the XOR only needs odd multiplicities,</text>
+  <text x="750" y="345" text-anchor="middle">so the parity bitmap is enough:</text>
+  <text x="750" y="363" text-anchor="middle">XOR_texts f(v) = XOR_{bit[v]=1} f(v)</text>
+</svg>

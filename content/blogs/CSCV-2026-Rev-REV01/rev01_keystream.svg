@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="300" viewBox="0 0 1000 300">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .small { font-size: 12px; }
+      .dim { fill: #d0d0d0; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .dash { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .fill { fill: #ffffff; fill-opacity: 0.22; stroke: #ffffff; stroke-width: 1.4; }
+      .hot { fill: #ffffff; fill-opacity: 0.5; stroke: #ffffff; stroke-width: 1.4; }
+      .cell { fill: none; stroke: #ffffff; stroke-width: 1.2; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .plain { fill: none; stroke: #ffffff; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="500" y="30" text-anchor="middle" class="title">Making the keystream fast enough</text>
+  <rect x="30" y="80" width="210" height="80" rx="10" class="box"/>
+  <text x="135" y="116" text-anchor="middle">f(state): 29,725</text>
+  <text x="135" y="134" text-anchor="middle">x86 instructions</text>
+  <rect x="290" y="80" width="210" height="80" rx="10" class="box"/>
+  <text x="395" y="116" text-anchor="middle">trace once in unicorn</text>
+  <text x="395" y="134" text-anchor="middle">path is input-independent</text>
+  <rect x="550" y="80" width="190" height="80" rx="10" class="box"/>
+  <text x="645" y="116" text-anchor="middle">one C line per</text>
+  <text x="645" y="134" text-anchor="middle">instruction, gcc</text>
+  <rect x="790" y="80" width="180" height="80" rx="10" class="box"/>
+  <text x="880" y="116" text-anchor="middle">466,776 steps</text>
+  <text x="880" y="134" text-anchor="middle">88 s -&gt; 0.33 s</text>
+  <line x1="240" y1="120" x2="290" y2="120" class="line"/>
+  <line x1="500" y1="120" x2="550" y2="120" class="line"/>
+  <line x1="740" y1="120" x2="790" y2="120" class="line"/>
+  <text x="500" y="210" text-anchor="middle" class="small">state is one 32-bit word, output byte = new state &gt;&gt; 24</text>
+  <text x="500" y="240" text-anchor="middle" class="small">checked against the emulator on 5 x 20,000 random steps before use</text>
+</svg>

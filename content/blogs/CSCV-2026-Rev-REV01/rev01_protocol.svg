@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .small { font-size: 12px; }
+      .dim { fill: #d0d0d0; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .dash { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .fill { fill: #ffffff; fill-opacity: 0.22; stroke: #ffffff; stroke-width: 1.4; }
+      .hot { fill: #ffffff; fill-opacity: 0.5; stroke: #ffffff; stroke-width: 1.4; }
+      .cell { fill: none; stroke: #ffffff; stroke-width: 1.2; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .plain { fill: none; stroke: #ffffff; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="500" y="30" text-anchor="middle" class="title">Protocol (every byte XORed with a per-direction keystream)</text>
+  <rect x="120" y="50" width="160" height="40" rx="10" class="box"/>
+  <text x="200" y="75" text-anchor="middle">client</text>
+  <rect x="720" y="50" width="160" height="40" rx="10" class="box"/>
+  <text x="800" y="75" text-anchor="middle">C2 server</text>
+  <line x1="200" y1="90" x2="200" y2="670" class="plain"/>
+  <line x1="800" y1="90" x2="800" y2="670" class="plain"/>
+  <line x1="800" y1="110" x2="200" y2="110" class="line"/>
+  <text x="500" y="103" text-anchor="middle" class="small">a7  nonce[16] || rounds=4</text>
+  <line x1="200" y1="150" x2="800" y2="150" class="line"/>
+  <text x="500" y="143" text-anchor="middle" class="small">31  digest(nonce, GPU record) [32]</text>
+  <line x1="800" y1="190" x2="200" y2="190" class="line"/>
+  <text x="500" y="183" text-anchor="middle" class="small">c4  payload zebin [466,776]   (or 96: reject)</text>
+  <line x1="800" y1="240" x2="200" y2="240" class="line"/>
+  <text x="500" y="233" text-anchor="middle" class="small">5d  challenge C_r [128]</text>
+  <line x1="200" y1="280" x2="800" y2="280" class="line"/>
+  <text x="500" y="273" text-anchor="middle" class="small">e9  response R_r [128]</text>
+  <text x="500" y="320" text-anchor="middle" class="small dim">x 4 rounds, a wrong R_r gets 96 and a closed socket</text>
+  <line x1="800" y1="370" x2="200" y2="370" class="line"/>
+  <text x="500" y="363" text-anchor="middle" class="small">72  (empty)</text>
+  <line x1="200" y1="420" x2="800" y2="420" class="line"/>
+  <text x="500" y="413" text-anchor="middle" class="small">48  (empty)   &lt;- what chall.exe sends</text>
+  <line x1="800" y1="460" x2="200" y2="460" class="line"/>
+  <text x="500" y="453" text-anchor="middle" class="small">0b  (empty): goodbye, no flag</text>
+  <line x1="200" y1="530" x2="800" y2="530" class="line"/>
+  <text x="500" y="523" text-anchor="middle" class="small">6e  (empty)  &lt;- found by sweeping all types</text>
+  <line x1="800" y1="570" x2="200" y2="570" class="line"/>
+  <text x="500" y="563" text-anchor="middle" class="small">bc  "CSCV2026{...}" [42]</text>
+  <line x1="170" y1="490" x2="830" y2="490" class="dash"/>
+  <text x="212" y="482" text-anchor="start" class="small dim">the other ending</text>
+  <text x="500" y="618" text-anchor="middle" class="small">frame: type u8 | length u32 | check u16 | body</text>
+  <text x="500" y="642" text-anchor="middle" class="small">with an empty body the check is 0xBEEF ^ (type &lt;&lt; 8)</text>
+</svg>

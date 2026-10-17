@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .small { font-size: 12px; }
+      .dim { fill: #d0d0d0; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .dash { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .fill { fill: #ffffff; fill-opacity: 0.22; stroke: #ffffff; stroke-width: 1.4; }
+      .hot { fill: #ffffff; fill-opacity: 0.5; stroke: #ffffff; stroke-width: 1.4; }
+      .cell { fill: none; stroke: #ffffff; stroke-width: 1.2; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .plain { fill: none; stroke: #ffffff; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="500" y="30" text-anchor="middle" class="title">Control-flow flattening (protocol and keystream functions)</text>
+  <rect x="60" y="80" width="230" height="70" rx="10" class="box"/>
+  <text x="175" y="111" text-anchor="middle">state = 0x6b02</text>
+  <text x="175" y="129" text-anchor="middle">stored at [rsp+0x5c]</text>
+  <rect x="380" y="80" width="260" height="70" rx="10" class="box"/>
+  <text x="510" y="111" text-anchor="middle">dispatcher</text>
+  <text x="510" y="129" text-anchor="middle">cmp eax, K / je handler</text>
+  <rect x="720" y="60" width="220" height="50" rx="10" class="box"/>
+  <text x="830" y="90" text-anchor="middle" class="small">handler 0xfdb5</text>
+  <line x1="640" y1="115" x2="720" y2="85" class="line"/>
+  <rect x="720" y="130" width="220" height="50" rx="10" class="box"/>
+  <text x="830" y="160" text-anchor="middle" class="small">handler 0xfd76</text>
+  <line x1="640" y1="115" x2="720" y2="155" class="line"/>
+  <rect x="720" y="200" width="220" height="50" rx="10" class="box"/>
+  <text x="830" y="230" text-anchor="middle" class="small">... 184 states</text>
+  <line x1="640" y1="115" x2="720" y2="225" class="line"/>
+  <rect x="380" y="250" width="260" height="70" rx="10" class="box"/>
+  <text x="510" y="281" text-anchor="middle">next state computed</text>
+  <text x="510" y="299" text-anchor="middle">through MBA + helpers</text>
+  <polyline points="830,260 830,285 640,285" class="line"/>
+  <line x1="510" y1="250" x2="510" y2="150" class="line"/>
+  <line x1="290" y1="115" x2="380" y2="115" class="line"/>
+  <text x="500" y="370" text-anchor="middle" class="small">protocol function: 184 states, 54 ever executed; the other 130 only call opaque helpers</text>
+  <text x="500" y="395" text-anchor="middle" class="small">exit state 0xffff; no direct-call site in the obfuscated code was left unexecuted</text>
+</svg>

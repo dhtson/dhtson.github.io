@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="330" viewBox="0 0 1000 330">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+    </marker>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; fill: #ffffff; }
+      .title { font-size: 20px; font-weight: 700; }
+      .small { font-size: 12px; }
+      .dim { fill: #d0d0d0; }
+      .box { fill: none; stroke: #ffffff; stroke-width: 1.8; }
+      .dash { fill: none; stroke: #ffffff; stroke-width: 1.4; stroke-dasharray: 5 4; }
+      .fill { fill: #ffffff; fill-opacity: 0.22; stroke: #ffffff; stroke-width: 1.4; }
+      .hot { fill: #ffffff; fill-opacity: 0.5; stroke: #ffffff; stroke-width: 1.4; }
+      .cell { fill: none; stroke: #ffffff; stroke-width: 1.2; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .plain { fill: none; stroke: #ffffff; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="500" y="30" text-anchor="middle" class="title">Partial sums: guess one byte, shrink the table</text>
+  <rect x="30" y="80" width="160" height="90" rx="10" class="box"/>
+  <text x="110" y="112" text-anchor="middle">bitmap</text>
+  <text x="110" y="130" text-anchor="middle">(v0,v1,v2,v3)</text>
+  <text x="110" y="148" text-anchor="middle">2^32 bits</text>
+  <line x1="190" y1="125" x2="226" y2="125" class="line"/>
+  <text x="208" y="205" text-anchor="middle" class="small">guess</text>
+  <text x="208" y="223" text-anchor="middle" class="small">k0, k1</text>
+  <rect x="226" y="80" width="160" height="90" rx="10" class="box"/>
+  <text x="306" y="112" text-anchor="middle">step A</text>
+  <text x="306" y="130" text-anchor="middle">(t1,v2,v3)</text>
+  <text x="306" y="148" text-anchor="middle">2^24 bits</text>
+  <line x1="386" y1="125" x2="422" y2="125" class="line"/>
+  <text x="404" y="205" text-anchor="middle" class="small">guess</text>
+  <text x="404" y="223" text-anchor="middle" class="small">k2</text>
+  <rect x="422" y="80" width="160" height="90" rx="10" class="box"/>
+  <text x="502" y="112" text-anchor="middle">step B</text>
+  <text x="502" y="130" text-anchor="middle">(t2,v3)</text>
+  <text x="502" y="148" text-anchor="middle">2^16 bits</text>
+  <line x1="582" y1="125" x2="618" y2="125" class="line"/>
+  <text x="600" y="205" text-anchor="middle" class="small">guess</text>
+  <text x="600" y="223" text-anchor="middle" class="small">k3</text>
+  <rect x="618" y="80" width="160" height="90" rx="10" class="box"/>
+  <text x="698" y="112" text-anchor="middle">step C</text>
+  <text x="698" y="130" text-anchor="middle">t3</text>
+  <text x="698" y="148" text-anchor="middle">2^8 bits</text>
+  <line x1="778" y1="125" x2="814" y2="125" class="line"/>
+  <text x="796" y="205" text-anchor="middle" class="small">guess</text>
+  <text x="796" y="223" text-anchor="middle" class="small">k5'</text>
+  <rect x="814" y="80" width="160" height="90" rx="10" class="box"/>
+  <text x="894" y="112" text-anchor="middle">step D</text>
+  <text x="894" y="130" text-anchor="middle">sum S</text>
+  <text x="894" y="148" text-anchor="middle">8 bits</text>
+  <text x="500" y="270" text-anchor="middle" class="small">t1 = g0(v0^k0) ^ g1(v1^k1),   g_j(x) = InvMC[r][j] * InvS(x)</text>
+  <text x="500" y="295" text-anchor="middle" class="small">keep a key only if S = XOR_{t3 set} InvS(t3 ^ k5') == 0 for every structure</text>
+</svg>
